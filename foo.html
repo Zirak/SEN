@@ -1,6 +1,7 @@
 <script src='util.js'></script>
 <script src='tokens.js'></script>
 <script src='parser.js'></script>
+<script src='encoder.js'></script>
 
 <form name='container'>
 	<textarea name='sen' cols=80 rows=10>sen</textarea>
@@ -19,15 +20,19 @@
 
 	cont.tojs.onclick = function () {
 		try {
-			res = JSON.stringify(parse(sen.value), null, 4);
+			js.value = JSON.stringify(parser.parse(sen.value), null, 4);
 		}
 		catch (e) {
-			res = e.toString();
+			js.value = e.toString();
+			throw e;
 		}
-
-		js.value = res;
 	};
 	cont.tosen.onclick = function () {
 		sen.value = encode(JSON.parse(js.value));
 	};
+
+	//small sanity checks
+	parser.parse('a');
+	parser.parse('(a)');
+	parser.parse('(:a b)');
 </script>

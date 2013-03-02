@@ -1,4 +1,5 @@
 ### SEN: S-Expression Notation ###
+
 In Lisp, data is code. Coincidentally, Lisp stands for LISt-Processing, and if you've ever seen a line of lisp (usually followed by "sweet mother of jesus what are all these parentheses?"), you'll know that lists are easy to express:
 
 ```lisp
@@ -104,8 +105,11 @@ A horribly contrived example made so I can write the decoder. Was it worth it? Y
 ### Syntax ###
 
 ```lisp
-; single-line comment (to-be-implemented,
-;   adding here for reference and documentation)
+; single-line comment
+
+; atoms
+atom
+;simply a value
 
 ; lists
 (item0 item1 item2)
@@ -120,6 +124,8 @@ A horribly contrived example made so I can write the decoder. Was it worth it? Y
 
 And that's it for now.
 
-### TODOs ###
-* Allow commenting
+### Implementation ###
+Presented here is a javascript implementation of the parser & encoder.
+
+#### TODOs ####
 * Allow explicit strings (wrapping in quotes), for multiword atoms and "reserved tokens" (nil, t, leading parentheses, etc)
