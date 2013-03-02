@@ -126,7 +126,6 @@ var sexp = parser.sexp = {
 
 		var child;
 		while (src[parser.idx] !== TK.END_SEXP) {
-			console.log(src[parser.idx], parser.idx)
 			if (!src[parser.idx]) {
 				throw new SyntaxError('Unbalanced sexp');
 			}
