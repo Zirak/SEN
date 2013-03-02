@@ -1,3 +1,5 @@
+"use strict";
+
 var parse = function (src) {
 	var translators = {
 		atom : function (token) {
@@ -31,16 +33,6 @@ var parse = function (src) {
 	}
 };
 
-var TK = {
-	BEGIN_SEXP : '(',
-	END_SEXP   : ')',
-	DICT_KEY   : ':',
-	SEPARATOR  : ' ',
-	NIL        : 'nil',
-	TRUE       : 't',
-	ZALGO      : '̳̲͎̟͚̰͈͂̾̋͌ͩ̅̎́Z̸̲͕̺̼͗̋̀́A͔̒͂ͬ̃̋ͭ͛̚L͉̹̟̙̆ͯ̓̀̅̄͗ͬ̕G͒̔ͣ̾ͮͭ̇͊͏̴͚͇̟̬̤̖̞̕ͅỎ̵̲̮͎͕͎͙̤̾̂̈́ͣ̂́!̛̺̙͎͕̹̍͛ͧ̇͋̃͑'
-};
-
 var encode = function (val) {
 
 	switch (typeof val) {
@@ -72,34 +64,40 @@ var encode = function (val) {
 	}
 
 	function encodeArray (arr) {
-		return TK.BEGIN_SEXP +
+		return (
+			TK.BEGIN_SEXP +
 			arr.map(encode).join(TK.SEPARATOR) +
-			TK.END_SEXP;
+			TK.END_SEXP );
 	}
 	function encodeObject (obj) {
-		return TK.BEGIN_SEXP +
+		return (
+			TK.BEGIN_SEXP +
 			Object.keys(obj).map(encodePair(obj)).join(TK.SEPARATOR) +
-			TK.END_SEXP;
+			TK.END_SEXP );
 	}
 
 	function encodePair (obj) {
 		return function (key) {
-			return TK.DICT_KEY + encode(key) +
-				TK.SEPARATOR + encode(obj[key]);
+			return (
+				TK.DICT_KEY + encode(key) +
+				TK.SEPARATOR + encode(obj[key]) );
 		};
 	}
 };
 
 var tokenize = function (str, idx) {
-	if (!str[idx]) {
+	var ch = str[idx];
+	if (!ch) {
 		return '';
 	}
-
+	if (ch === TK.COMMENT) {
+		return tokenize(str, idx+lineOffset(str, idx));
+	}
 	if (str[idx] === TK.BEGIN_SEXP) {
 		return sexp.tokenize(str, idx);
 	}
 	return atom.tokenize(str, idx);
-}
+};
 
 var sexp = {
 	tokenize : function (src, idx) {
@@ -119,15 +117,18 @@ var sexp = {
 
 		var child;
 		while (src[idx] !== TK.END_SEXP) {
-			child = tokenize(src, idx);
-
-			ret.value.push(child);
-			idx += child.offset;
-			idx += whitespaceOffset(src, idx);
-
+			//handling the nutjobs
 			if (!src[idx]) {
 				throw new SyntaxError('Unbalanced sexp');
 			}
+
+			child = tokenize(src, idx);
+			//handle \n)
+			if (child.value) {
+				ret.value.push(child);
+			}
+			idx += child.offset;
+			idx += whitespaceOffset(src, idx);
 		}
 
 		ret.offset = idx - ret.offset + 1; //+1 for the )
@@ -155,7 +156,7 @@ var dict = {
 		//to you, my good reader, for betraying a piece of your soul in this
 		// stranger's journey.
 		//last but not least, to future me. I'm sorry.
-		while (src[idx] !== TK.END_SEXP) {
+		while (src[idx] !== TK.END_SEXP && src[idx] !== TK.COMMENT) {
 			if (src[idx] !== TK.DICT_KEY) {
 				throw new SyntaxError(
 					'dicts must only contain :key value pairs');
@@ -180,7 +181,7 @@ var dict = {
 				throw new SyntaxError('valueless tramp');
 			}
 
-			idx += value.offset
+			idx += value.offset;
 			idx += whitespaceOffset(src, idx);
 
 			ret.value.push({
@@ -199,6 +200,13 @@ var dict = {
 	}
 };
 var atom = {
+	not : TruthMap([
+		TK.SEPARATOR,
+		TK.NEWLINE,
+		TK.BEGIN_SEXP,
+		TK.END_SEXP,
+		TK.COMMENT
+	]),
 	tokenize : function (src, idx) {
 		var ret = {
 			type   : 'atom',
@@ -207,12 +215,8 @@ var atom = {
 		};
 
 		//TODO: add useful shit
-		while (
-			src[idx] &&
-				src[idx] !== TK.SEPARATOR &&
-				src[idx] !== TK.BEGIN_SEXP &&
-				src[idx] !== TK.END_SEXP
-		) {
+		//this does not scale at all
+		while (src[idx] && !this.not[src[idx]]) {
 			ret.value += src[idx];
 			idx += 1;
 		}
@@ -231,4 +235,14 @@ var whitespaceOffset = function (src, idx) {
 	}
 
 	return i - idx;
+};
+
+var lineOffset = function (src, idx) {
+	var i = idx;
+
+	while (/[^\n]/.test(src[i])) {
+		i += 1;
+	}
+
+	return i - idx + 1; //+1 for the \n
 };

@@ -79,26 +79,24 @@ Now, what about SEN?
 
 ```lisp
 (:log
- ((
-  :date 2011-07-10T19:11:32
-  :millis 1310317892812
-  :sequence 0
-  :logger de.huxhorn.lilith.sandbox.JulSandbox
-  :level INFO
-  :class de.huxhorn.lilith.sandbox.JulSandbox
-  :method main
-  :thread 1
-  :message Args)
- (
-  :date 2011-07-10T19:11:32
-  :millis 1310317892906
-  :sequence 1
-  :logger de.huxhorn.lilith.sandbox.JulSandbox$InnerClass
-  :level INFO
-  :class de.huxhorn.lilith.sandbox.JulSandbox$InnerClass
-  :method execute
-  :thread 1
-  :message Foo!)))
+  ((:date 2011-07-10T19:11:32
+    :millis 1310317892812
+    :sequence 0
+    :logger de.huxhorn.lilith.sandbox.JulSandbox
+    :level INFO
+    :class de.huxhorn.lilith.sandbox.JulSandbox
+    :method main
+    :thread 1
+    :message Args)
+   (:date 2011-07-10T19:11:32
+    :millis 1310317892906
+    :sequence 1
+    :logger de.huxhorn.lilith.sandbox.JulSandbox$InnerClass
+    :level INFO
+    :class de.huxhorn.lilith.sandbox.JulSandbox$InnerClass
+    :method execute
+    :thread 1
+    :message Foo!)))
 ```
 
 A horribly contrived example made so I can write the decoder. Was it worth it? Yes it was. We can see the obvious relation to JSON, since they both use two basic building blocks: Lists and dictionaries.
