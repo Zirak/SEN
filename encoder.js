@@ -12,7 +12,7 @@ var lineSep = '',
 
 //returns the SEN representation of val
 function str (val) {
-	var prevIndent = indent;
+	var prevIndent, res;
 
 	switch (typeof val) {
 	case 'string': case 'number':
@@ -34,8 +34,6 @@ function str (val) {
 			return TK.NIL;
 		}
 
-		var res;
-
 		prevIndent = indent;
 		indent += indentChar;
 
@@ -54,8 +52,6 @@ function str (val) {
 	}
 
 	function stringArray (arr) {
-		console.log( prevIndent.length, indent.length );
-
 		if (!arr.length) {
 			return TK.BEGIN_SEXP + TK.END_SEXP;
 		}
@@ -86,7 +82,7 @@ function str (val) {
 			TK.SYMBOL_KEY + str(key) +
 			TK.SEPARATOR + str(obj[key]) );
 	}
-};
+}
 
 SEN.stringify = function (obj, replacer, spaces) {
 	if (spaces) {

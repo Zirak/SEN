@@ -90,7 +90,7 @@ var parser = {
 	}
 };
 
-var tokenize = parser.tokenize = function () {
+parser.tokenize = function () {
 	var ch = this.src[this.idx];
 
 	if (!ch) {
@@ -107,7 +107,7 @@ var tokenize = parser.tokenize = function () {
 	return this.atom.tokenize();
 };
 
-var atom = parser.atom = {
+parser.atom = {
 	not : TruthMap([
 		TK.SEPARATOR,
 		TK.NEWLINE,
@@ -149,7 +149,7 @@ var atom = parser.atom = {
 	}
 };
 
-var sexp = parser.sexp = {
+parser.sexp = {
 	tokenize : function () {
 		//a special case of sexps is the property-list, plist
 		if (parser.peek() === TK.SYMBOL_KEY) {
@@ -185,7 +185,7 @@ var sexp = parser.sexp = {
 		return ret;
 	}
 };
-var plist = parser.plist = {
+parser.plist = {
 	tokenize : function () {
 		var ret = {
 			type    : 'plist',
