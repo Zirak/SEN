@@ -1,4 +1,11 @@
+if (typeof SEN === 'undefined') {
+	SEN = {};
+}
+
+(function () {
 "use strict";
+
+//SEN.parse will be exposed at the end
 
 var parser = {
 	reinit : function (src) {
@@ -248,3 +255,11 @@ var plist = parser.plist = {
 		return value;
 	}
 };
+
+//BOO!
+SEN.parse = parser.parse.bind(parser);
+
+//for debugging. TODO: remove the following
+//TODO: check TODOs
+SEN.parser = parser;
+})();

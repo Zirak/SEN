@@ -1,4 +1,18 @@
-var encode = function (val) {
+if (typeof SEN === 'undefined' ) {
+	SEN = {};
+}
+
+(function () {
+"use strict";
+
+var lineSep = '',
+	indentChar = '',
+
+	indent = '';
+
+//returns the SEN representation of val
+function str (val) {
+	var prevIndent = indent;
 
 	switch (typeof val) {
 	case 'string': case 'number':
@@ -19,33 +33,73 @@ var encode = function (val) {
 		if (!val) {
 			return TK.NIL;
 		}
-		else if (Array.isArray(val)) {
-			return encodeArray(val);
+
+		var res;
+
+		prevIndent = indent;
+		indent += indentChar;
+
+		if (Array.isArray(val)) {
+			res = stringArray(val);
 		}
-		return encodeObject(val);
+		else {
+			res = stringObject(val);
+		}
+		indent = prevIndent;
+
+		return res;
 
 	default:
 		throw new SyntaxError('aint nobody got encoding fo dat');
 	}
 
-	function encodeArray (arr) {
+	function stringArray (arr) {
+		console.log( prevIndent.length, indent.length );
+
+		if (!arr.length) {
+			return TK.BEGIN_SEXP + TK.END_SEXP;
+		}
+
 		return (
 			TK.BEGIN_SEXP +
-				arr.map(encode).join(TK.SEPARATOR) +
-				TK.END_SEXP );
-	}
-	function encodeObject (obj) {
-		return (
-			TK.BEGIN_SEXP +
-				Object.keys(obj).map(encodePair(obj)).join(TK.SEPARATOR) +
-				TK.END_SEXP );
+			arr.map(str).join(TK.SEPARATOR + lineSep + indent) +
+			TK.END_SEXP );
 	}
 
-	function encodePair (obj) {
-		return function (key) {
-			return (
-				TK.DICT_KEY + encode(key) +
-					TK.SEPARATOR + encode(obj[key]) );
-		};
+	function stringObject (obj) {
+		var keys = Object.keys(obj);
+
+		if (!keys.length) {
+			return TK.BEGIN_SEXP + TK.END_SEXP;
+		}
+
+		return (
+			TK.BEGIN_SEXP +
+			keys
+				.map(stringPair.bind(null, obj))
+				.join(TK.SEPARATOR + lineSep + indent ) +
+			TK.END_SEXP );
+	}
+
+	function stringPair (obj, key) {
+		return (
+			TK.SYMBOL_KEY + str(key) +
+			TK.SEPARATOR + str(obj[key]) );
 	}
 };
+
+SEN.stringify = function (obj, replacer, spaces) {
+	if (spaces) {
+		lineSep = '\n';
+		indentChar = ' ';
+	}
+	else {
+		lineSep = '';
+		indentChar = '';
+	}
+	indent = '';
+
+	return str(obj);
+};
+
+})();

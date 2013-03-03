@@ -135,7 +135,18 @@ t
 And that's it for now.
 
 ### Implementation ###
-Presented here is a javascript implementation of the parser & encoder.
+Presented here is a javascript implementation of the parser & encoder. Its API highly resembles the JSON object's API.
+
+```javascript
+//SEN.parse accepts SEN, returns the equivalent js object
+js_obj = SEN.parse(sen_str);
+
+//SEN.stringify accepts a js object, returns the equivalent in SEN
+sen_str = SEN.stringify(js_obj)
+```
+
+As of the time of writing. `SEN.stringify` accepts a boolean 3rd parameter. If true, then the output string will be beautified.
 
 #### TODOs ####
 * Allow explicit strings (wrapping in quotes), for multiword atoms and "reserved tokens" (nil, t, leading parentheses, etc)
+* Add the reviver argument to `SEN.parse` and `SEN.stringify`

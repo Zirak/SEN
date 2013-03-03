@@ -20,7 +20,7 @@
 
 	cont.tojs.onclick = function () {
 		try {
-			js.value = JSON.stringify(parser.parse(sen.value), null, 4);
+			js.value = JSON.stringify(SEN.parse(sen.value), null, 4);
 		}
 		catch (e) {
 			js.value = e.toString();
@@ -28,11 +28,15 @@
 		}
 	};
 	cont.tosen.onclick = function () {
-		sen.value = encode(JSON.parse(js.value));
+		sen.value = SEN.stringify(JSON.parse(js.value), null, true);
 	};
 
-	//small sanity checks
-	parser.parse('a');
-	parser.parse('(a)');
-	parser.parse('(:a b)');
+	//small sanity checks, to see if I introduced any obvious errors
+	SEN.parse('a');
+	SEN.parse('(a)');
+	SEN.parse('(:a b)');
+
+	SEN.stringify(0);
+	SEN.stringify([0]);
+	SEN.stringify({a:0});
 </script>
