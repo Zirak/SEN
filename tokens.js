@@ -2,7 +2,8 @@
 var TK = {
 	BEGIN_SEXP : '(',
 	END_SEXP   : ')',
-	DICT_KEY   : ':',
+
+	SYMBOL_KEY : ':',
 
 	SEPARATOR  : ' ',
 	NEWLINE    : '\n',

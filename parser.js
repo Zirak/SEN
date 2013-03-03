@@ -1,9 +1,12 @@
 "use strict";
 
 var parser = {
-	parse : function (src) {
+	reinit : function (src) {
 		this.src = src;
 		this.idx = 0;
+	},
+	parse : function (src) {
+		this.reinit(src);
 
 		var root = this.tokenize();
 		this.src = null; //cleanup
@@ -13,31 +16,50 @@ var parser = {
 
 	//accepts a token, returns a js value representing it
 	translate : function translate (token) {
-		var translators = {
-			atom : function (token) {
-				return token.value;
-			},
-			sexp : function (token) {
-				return token.value.map(translate);
-			},
-			dict : function (token) {
-				return token.value.reduce(dictKey, {});
-			}
-		};
-
 		var type = token.type;
-		if (translators[type]) {
-			return translators[type](token);
+		if (this.translators.hasOwnProperty(type)) {
+			return this.translators[type](token);
 		}
 
 		throw new Error(
 			'Unknown token type ' + type + ', commencing pants-shitting');
+	},
+
+	translators : (function () {
+		var ret = {
+			atom : function (token) {
+				return token.value;
+			},
+			sexp : function (token) {
+				return token.value.map(parser.translate, parser);
+			},
+			plist : function (token) {
+				return token.value.reduce(dictKey, {});
+			}
+		};
+		ret.symbol = ret.atom;
+
+		return ret;
 
 		function dictKey (ret, pair) {
 			//I dare you to say this 3 times fast
-			ret[pair.key.value] = translate(pair.value);
+			ret[pair.key.value] = parser.translate(pair.value);
 			return ret;
 		}
+	})(),
+
+	current : function () {
+		return this.src[this.idx];
+	},
+	skip : function () {
+		this.idx += 1;
+	},
+	nextChar : function () {
+		this.skip();
+		return this.current();
+	},
+	peek : function () {
+		return this.src[this.idx + 1];
 	},
 
 	skipMatching : function (re) {
@@ -89,17 +111,31 @@ var atom = parser.atom = {
 		TK.COMMENT
 	]),
 
+	special : {
+		'nil' : null,
+		't'   : true,
+	},
+
 	tokenize : function () {
-		var src = parser.src;
 		var ret = {
 			type   : 'atom',
 			value  : ''
 		};
 
-		//this is rather convoluted
-		while (src[parser.idx] && !this.not[src[parser.idx]]) {
-			ret.value += src[parser.idx];
-			parser.idx += 1;
+		var ch = parser.current();
+
+		if (ch === TK.SYMBOL_KEY) {
+			ret.type = 'symbol';
+			ch = parser.nextChar();
+		}
+
+		while (ch && !this.not[ch]) {
+			ret.value += ch;
+			ch = parser.nextChar();
+		}
+
+		if (ret.type !== 'symbol' && this.special.hasOwnProperty(ret.value)) {
+			ret.value = this.special[ret.value];
 		}
 
 		return ret;
@@ -108,11 +144,9 @@ var atom = parser.atom = {
 
 var sexp = parser.sexp = {
 	tokenize : function () {
-		var src = parser.src;
-
-		//a special case of sexps is the dictionary
-		if (src[parser.idx+1] === TK.DICT_KEY) {
-			return parser.dict.tokenize();
+		//a special case of sexps is the property-list, plist
+		if (parser.peek() === TK.SYMBOL_KEY) {
+			return parser.plist.tokenize();
 		}
 
 		var ret = {
@@ -121,43 +155,42 @@ var sexp = parser.sexp = {
 		};
 
 		//we're on a (, move to next non-whitespace char
-		parser.idx += 1;
+		parser.skip();
 		parser.skipWhitespace();
 
-		var child;
-		while (src[parser.idx] !== TK.END_SEXP) {
-			if (!src[parser.idx]) {
+		var ch = parser.current(),
+			child;
+		while (ch !== TK.END_SEXP) {
+			if (!ch) {
 				throw new SyntaxError('Unbalanced sexp');
 			}
 
 			child = parser.tokenize();
-			//handle \n)
-			if (child.value) {
-				ret.value.push(child);
-			}
+			ret.value.push(child);
+
 			parser.skipWhitespace();
+			ch = parser.current();
 		}
 
 		//move over the )
-		parser.idx += 1;
+		parser.skip();
 
 		return ret;
 	}
 };
-var dict = parser.dict = {
+var plist = parser.plist = {
 	tokenize : function () {
-		var src = parser.src;
-
 		var ret = {
-			type    : 'dict',
+			type    : 'plist',
 			value   : [],
 		};
 
 		//we're on a (, move past that and whitespace
-		parser.idx += 1;
+		parser.skip();
 		parser.skipWhitespace();
 
-		var key, value;
+		var ch = parser.current(),
+			key, value;
 		//before we continue, I would like to apologize to several people:
 		//my mother, who through years of abuse has only made me come to this;'
 		//my father, who had to put up with my mother and I;
@@ -165,44 +198,53 @@ var dict = parser.dict = {
 		//to you, my good reader, for betraying a piece of your soul in this
 		// stranger's journey.
 		//last but not least, to future me. I'm sorry.
-		while (src[parser.idx] !== TK.END_SEXP) {
-			if (!src[parser.idx]) {
+		while (ch !== TK.END_SEXP) {
+			if (!ch) {
 				throw new SyntaxError('unbalanced sexp');
 			}
-			if (src[parser.idx] !== TK.DICT_KEY) {
-				throw new SyntaxError(
-					'dicts must only contain :key value pairs');
-			}
-			parser.idx += 1; //move past :
 
-			key = parser.tokenize();
-
-			if (!key.value) {
-				throw new SyntaxError('keyless');
-			}
-			else if (key.type !== 'atom') {
-				throw new SyntaxError('dict key must be an atom');
-			}
-
+			key = this.tokenizeKey();
 			parser.skipWhitespace();
 
-			value = parser.tokenize();
-
-			if (!value.value) {
-				throw new SyntaxError('valueless tramp');
-			}
-
+			value = this.tokenizeValue();
 			parser.skipWhitespace();
 
 			ret.value.push({
-				key : key,
+				key   : key,
 				value : value
 			});
+
+			ch = parser.current();
 		}
 
 		//move over the )
-		parser.idx += 1;
+		parser.skip();
 
 		return ret;
+	},
+
+	tokenizeKey : function () {
+		var key = parser.tokenize();
+
+		//because nil (null) is a possible value, we have to strictly check
+		// against the empty string as a no-value
+		if (key.value === '') {
+			throw new SyntaxError('keyless');
+		}
+		else if (key.type !== 'symbol') {
+			throw new SyntaxError('plist key must be a symbol');
+		}
+
+		return key;
+	},
+	tokenizeValue : function () {
+		var value = parser.tokenize();
+
+		//see comment in tokenizeKey
+		if (value.value === '') {
+			throw new SyntaxError('valueless tramp');
+		}
+
+		return value;
 	}
 };

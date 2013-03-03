@@ -109,17 +109,27 @@ A horribly contrived example made so I can write the decoder. Was it worth it? Y
 
 ; atoms
 atom
-;simply a value
+;simply a value. there are special values an atom may hold:
+nil
+;which means null/false in other languages, and
+t
+;which means true
+
+; symbols
+:atom
+;symbols are atoms prefixed by a colon. unlike atoms, the value is treated
+; literally, so for instance :t evaluates to :t and not :true
+
 
 ; lists
-(item0 item1 item2)
-; a list of atoms separated by spaces
+(value0 value1 value2)
+; a list of values (atoms, symbols, lists...) separated by spaces
 
 ; dicts
 (:key0 val0 :key1 val1)
-; a list of pairs
-; former pair item is the key, prefixed by colon :
-; latter item is the value associated with the key
+; a list of key=>value pairs
+; former pair item is the key, which must be a symbol
+; latter item is the value associated with the key, which can be anything
 ```
 
 And that's it for now.
