@@ -85,8 +85,8 @@ var parser = {
 
 	skipLine : function () {
 		this.skipMatching(/[^\n]/);
-		//+1 for the \n we passed over in the loop
-		this.idx += 1;
+		//for the \n we passed over in the loop
+		this.skip();
 	}
 };
 
@@ -108,15 +108,22 @@ parser.tokenize = function () {
 };
 
 parser.atom = {
-	not : TruthMap([
-		TK.SEPARATOR,
-		TK.NEWLINE,
+	not : (function () {
+		return [
+			TK.SEPARATOR,
+			TK.NEWLINE,
 
-		TK.BEGIN_SEXP,
-		TK.END_SEXP,
+			TK.BEGIN_SEXP,
+			TK.END_SEXP,
 
-		TK.COMMENT
-	]),
+			TK.COMMENT
+		].reduce(assignTrue, {});
+
+		function assignTrue (ret, key) {
+			ret[key] = true;
+			return ret;
+		}
+	})(),
 
 	special : {
 		'nil' : null,
