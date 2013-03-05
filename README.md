@@ -109,17 +109,21 @@ A horribly contrived example made so I can write the decoder. Was it worth it? Y
 
 ; atoms
 atom
-;simply a value. there are special values an atom may hold:
+; simply a value. there are special values an atom may hold:
 nil
-;which means null/false in other languages, and
+; which means null/false in other languages, and
 t
-;which means true
+; which means true
 
 ; symbols
 :atom
-;symbols are atoms prefixed by a colon. unlike atoms, the value is treated
+; symbols are atoms prefixed by a colon. unlike atoms, the value is treated
 ; literally, so for instance :t evaluates to :t and not :true
 
+; strings
+"foobar"
+; ye-olde strings. nothing surprising here. only double-quotes are accepted.
+; you may specify unicode characters by using \uXXXX, where X is a hex digit.
 
 ; lists
 (value0 value1 value2)
@@ -148,5 +152,5 @@ sen_str = SEN.stringify(js_obj)
 As of the time of writing. `SEN.stringify` accepts a boolean 3rd parameter. If true, then the output string will be beautified.
 
 #### TODOs ####
-* Allow explicit strings (wrapping in quotes), for multiword atoms and "reserved tokens" (nil, t, leading parentheses, etc)
+* Add proper number support
 * Add the reviver argument to `SEN.parse` and `SEN.stringify`

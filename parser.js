@@ -94,9 +94,13 @@ var parser = {
 	},
 
 	skipLine : function () {
-		this.skipMatching(/[^\n]/);
-		//for the \n we passed over in the loop
-		this.skip();
+		var ch = this.current();
+		while (ch && ch !== '\n') {
+			ch = this.nextChar();
+		}
+
+		//we may or may not be on an EOL. if we are, skip over it
+		ch === '\n' && this.skip();
 	}
 };
 
@@ -151,6 +155,9 @@ parser.string = {
 				if (this.special.hasOwnProperty(ch)) {
 					ch = this.special[ch];
 				}
+				else if (ch === 'u') {
+					ch = this.getUnicode();
+				}
 				escape = false;
 
 				ret.value += ch;
@@ -169,6 +176,22 @@ parser.string = {
 		parser.skip();
 
 		return ret;
+	},
+
+	getUnicode : function () {
+		//stolen from Douglas Crockford's json-parse.js
+		var unicode = 0, hex;
+
+		for (var i = 0; i < 4; i++) {
+			hex = parseInt(parser.nextChar(), 16);
+
+			if (isNaN(hex)) {
+				throw new SyntaxError('Illegal character in unicode string');
+			}
+			unicode = unicode * 16 + hex;
+		}
+
+		return String.fromCharCode(unicode);
 	}
 };
 
