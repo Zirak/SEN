@@ -1,0 +1,118 @@
+\documentclass[a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1.5cm]{geometry}
+\usepackage{syntax}
+\usepackage{rail}
+
+\setlength{\grammarindent}{4em}
+
+\begin{document}
+
+\title{Syntax Explanation and Definition of SEN}
+\author{Zirak}
+\date{\today}
+
+\maketitle
+
+\tableofcontents
+
+\section{The Complete Syntax}
+
+\begin{grammar}
+	<program> $\to$ <value>
+		\alt $\epsilon$
+		
+	<value> $\to$ <atom>
+		\alt <symbol>
+		\alt <list>
+		\alt <plist>
+		
+	<atom> $\to$ `nil'
+		\alt `t'
+		\alt <anything>
+		
+	<symbol> $\to$ `:' <atom>
+	
+	<list> $\to$ `(' <list-values> `)'
+
+	<list-values> $\to$ <value> <list-values>
+		\alt $\epsilon$
+		
+	<plist> $\to$ `(' <pairs> `)'
+
+	<pairs> $\to$ <symbol> <value> <pairs>
+		\alt $\epsilon$
+\end{grammar}
+
+\section{Individual Components}
+
+\subsection{Value}
+\begin{rail}
+	value : (atom | symbol | list | plist)
+\end{rail}
+
+\begin{grammar}
+	<value> $\to$ <atom>
+		\alt <symbol>
+		\alt <list>
+		\alt <plist>
+\end{grammar}
+
+A $value$ is any of the possible SEN structures.
+
+\subsection{Atom}
+\begin{rail}
+	atom : 'nil' | 't' | anything
+\end{rail}
+
+\begin{grammar}
+	<atom> $\to$ `nil'
+		\alt `t'
+		\alt <anything>
+\end{grammar}
+
+An $atom$ is any of the special constructs $nil$ or $t$, or any combination of characters, excluding the space character and parentheses $()$. In addition, an $atom$ may not begin with the colon, $:$.
+
+\subsection{Symbol}
+\begin{rail}
+	symbol : ':' atom
+\end{rail}
+
+\begin{grammar}
+	<symbol> $\to$ `:' <atom>
+\end{grammar}
+
+A $symbol$ is a literal value. While an $atom$ may be subject to interpretations ($t$ may turn to $true$ in a target language), a $symbol$ will always appear as-is.
+
+
+\subsection{List}
+\begin{rail}
+	list : '(' ( () + value ) ')'
+\end{rail}
+
+\begin{grammar}
+	<list> $\to$ `(' <list-values> `)'
+
+	<list-values> $\to$ <value> <list-values>
+		\alt $\epsilon$
+\end{grammar}
+
+A $list$ is one or more $value$s, separated by spaces. They do not have to be homogeneous; that is, you can mix up the value types. You may arbitrarily nest lists to easily create complex structures.
+
+
+\subsection{Property-List}
+\begin{rail}
+	plist : '(' (() + (symbol value)) ')'
+\end{rail}
+
+\begin{grammar}
+	<plist> $\to$ `(' <pairs> `)'
+
+	<pairs> $\to$ <symbol> <value> <pairs>
+		\alt $\epsilon$
+\end{grammar}
+
+$p-lists$, or $property-lists$, can be considered a poor man's hash-table. They are made of one or more $key => value$ pairs, where the key must be a $symbol$, and the value may be any $value$ allowed in the language. The $key$ and $value$ are separated by a space, and so are each pair.
+
+\end{document}
