@@ -25,6 +25,7 @@
 		
 	<value> $\to$ <atom>
 		\alt <symbol>
+		\alt string
 		\alt <list>
 		\alt <plist>
 		
@@ -43,11 +44,16 @@
 
 	<pairs> $\to$ <symbol> <value> <pairs>
 		\alt $\epsilon$
+		
+	<comment> $\to$ `;' <comment-chars>
+	
+	<comment-chars> $\to$ <not-line-terminator> <comment-chars>
+		\alt $\epsilon$
 \end{grammar}
 
 \section{Individual Components}
 
-\subsection{Value}
+\subsection{Values}
 \begin{rail}
 	value : (atom | symbol | list | plist)
 \end{rail}
@@ -61,7 +67,7 @@
 
 A $value$ is any of the possible SEN structures.
 
-\subsection{Atom}
+\subsection{Atoms}
 \begin{rail}
 	atom : 'nil' | 't' | anything
 \end{rail}
@@ -74,7 +80,7 @@ A $value$ is any of the possible SEN structures.
 
 An $atom$ is any of the special constructs $nil$ or $t$, or any combination of characters, excluding the space character and parentheses $()$. In addition, an $atom$ may not begin with the colon, $:$.
 
-\subsection{Symbol}
+\subsection{Symbols}
 \begin{rail}
 	symbol : ':' atom
 \end{rail}
@@ -85,8 +91,7 @@ An $atom$ is any of the special constructs $nil$ or $t$, or any combination of c
 
 A $symbol$ is a literal value. While an $atom$ may be subject to interpretations ($t$ may turn to $true$ in a target language), a $symbol$ will always appear as-is.
 
-
-\subsection{List}
+\subsection{Lists}
 \begin{rail}
 	list : '(' ( () + value ) ')'
 \end{rail}
@@ -101,7 +106,7 @@ A $symbol$ is a literal value. While an $atom$ may be subject to interpretations
 A $list$ is one or more $value$s, separated by spaces. They do not have to be homogeneous; that is, you can mix up the value types. You may arbitrarily nest lists to easily create complex structures.
 
 
-\subsection{Property-List}
+\subsection{Property-Lists}
 \begin{rail}
 	plist : '(' (() + (symbol value)) ')'
 \end{rail}
@@ -114,5 +119,19 @@ A $list$ is one or more $value$s, separated by spaces. They do not have to be ho
 \end{grammar}
 
 $p-lists$, or $property-lists$, can be considered a poor man's hash-table. They are made of one or more $key => value$ pairs, where the key must be a $symbol$, and the value may be any $value$ allowed in the language. The $key$ and $value$ are separated by a space, and so are each pair.
+
+\subsection{Comments}
+\begin{rail}
+	comment : ';' (()+ not[line-terminator])
+\end{rail}
+
+\begin{grammar}
+	<comment> $\to$ `;' <comment-chars>
+	
+	<comment-chars> $\to$ <not-line-terminator> <comment-chars>
+		\alt $\epsilon$
+\end{grammar}
+
+A $comment$ may be inserted at any point in the program. Its contents are ignored by the parser. The comment spans from the beginning of the semi-colon $;$ until a line-terminator is met (EOL or EOF).
 
 \end{document}
