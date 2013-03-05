@@ -13,10 +13,20 @@ var parser = {
 		this.idx = 0;
 	},
 	parse : function (src) {
+		var len = src.length;
+		//handle the empty program
+		if (!len) {
+			return '';
+		}
+
 		this.reinit(src);
 
 		var root = this.tokenize();
 		this.src = null; //cleanup
+
+		if (this.idx < len) {
+			console.warn('SEN.parse: Trailing characters after last value')
+		}
 
 		return this.translate(root);
 	},
@@ -34,7 +44,7 @@ var parser = {
 
 	translators : (function () {
 		var ret = {
-			atom : function (token) {
+			string : function (token) {
 				return token.value;
 			},
 			sexp : function (token) {
@@ -44,7 +54,7 @@ var parser = {
 				return token.value.reduce(dictKey, {});
 			}
 		};
-		ret.symbol = ret.atom;
+		ret.atom = ret.symbol = ret.string;
 
 		return ret;
 
@@ -104,7 +114,62 @@ parser.tokenize = function () {
 	if (ch === TK.BEGIN_SEXP) {
 		return this.sexp.tokenize();
 	}
+	else if (ch === TK.STRING) {
+		return this.string.tokenize();
+	}
 	return this.atom.tokenize();
+};
+
+parser.string = {
+	special : {
+		'b' : '\b',
+		'f' : '\f',
+		'n' : '\n',
+		'r' : '\r',
+		't' : '\t'
+	},
+
+	tokenize : function () {
+		var ret = {
+			type  : 'string',
+			value : ''
+		};
+
+		//we're on a ", move onto the next char
+		var ch = parser.nextChar(),
+			escape = false;
+
+		while (true) {
+			if (ch === TK.STRING && !escape) {
+				break;
+			}
+			else if (!ch) {
+				throw new SyntaxError("Unterminated string")
+			}
+
+			if (escape) {
+				if (this.special.hasOwnProperty(ch)) {
+					ch = this.special[ch];
+				}
+				escape = false;
+
+				ret.value += ch;
+			}
+			else if (ch === TK.ESCAPE) {
+				escape = true;
+			}
+			else {
+				ret.value += ch;
+			}
+
+			ch = parser.nextChar();
+		}
+
+		//once again, we're on a ", we have to let go.
+		parser.skip();
+
+		return ret;
+	}
 };
 
 parser.atom = {

@@ -3,6 +3,8 @@ var TK = {
 	BEGIN_SEXP : '(',
 	END_SEXP   : ')',
 
+	STRING     : '"',
+	ESCAPE     : '\\',
 	SYMBOL_KEY : ':',
 
 	SEPARATOR  : ' ',
