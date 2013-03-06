@@ -54,7 +54,7 @@ var parser = {
 				return token.value.reduce(dictKey, {});
 			}
 		};
-		ret.atom = ret.symbol = ret.string;
+		ret.atom = ret.symbol = ret.number = ret.string;
 
 		return ret;
 
@@ -120,6 +120,9 @@ parser.tokenize = function () {
 	}
 	else if (ch === TK.STRING) {
 		return this.string.tokenize();
+	}
+	else if (ch >= '0' && ch <= '9') {
+		return this.number.tokenize();
 	}
 	return this.atom.tokenize();
 };
@@ -196,22 +199,15 @@ parser.string = {
 };
 
 parser.atom = {
-	not : (function () {
-		return [
-			TK.SEPARATOR,
-			TK.NEWLINE,
+	not : TruthMap([
+		TK.SEPARATOR,
+		TK.NEWLINE,
 
-			TK.BEGIN_SEXP,
-			TK.END_SEXP,
+		TK.BEGIN_SEXP,
+		TK.END_SEXP,
 
-			TK.COMMENT
-		].reduce(assignTrue, {});
-
-		function assignTrue (ret, key) {
-			ret[key] = true;
-			return ret;
-		}
-	})(),
+		TK.COMMENT
+	]),
 
 	special : {
 		'nil' : null,
@@ -241,6 +237,36 @@ parser.atom = {
 		}
 
 		return ret;
+	}
+};
+
+parser.number = {
+	starts : TruthMap([
+		0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0,
+		'+', '-', '.', '#'
+	]),
+
+	tokenize : function () {
+		var ret = {
+			type : 'number',
+			value : ''
+		};
+
+		ret.value = this.nextNumber();
+
+		return ret;
+	},
+
+	nextNumber : function () {
+		var ch = parser.current(),
+			num = '';
+
+		while (ch && ch >= '0' && ch <= '9') {
+			num += ch;
+			ch = parser.nextChar()
+		}
+
+		return Number(num);
 	}
 };
 
@@ -350,6 +376,16 @@ parser.plist = {
 		return value;
 	}
 };
+
+//utility method
+function TruthMap (keys) {
+	return keys.reduce(assignTrue, Object.create(null));
+
+	function assignTrue (map, key) {
+		map[key] = true;
+		return map;
+	}
+}
 
 //BOO!
 SEN.parse = parser.parse.bind(parser);
