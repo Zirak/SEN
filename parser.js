@@ -8,63 +8,41 @@ if (typeof SEN === 'undefined') {
 //SEN.parse will be exposed at the end
 
 var parser = {
+	//use this property to signify the lack of a valid value
+	VOID : {},
+
+	//this variable abuses the fact that arrays are regular objects. tokens
+	// are saved in the order they were added, but you can also access them
+	// using individual token names. so for instance:
+	// parser.tokens[0] === parser.tokens.sexp
+	//tokens are ordered from the most complex to the simplest. in our case,
+	// the sexp which branches into every other value is handled first,
+	// and the atom which is the default value is handled last
+	tokens : [],
+
+	registerToken : function (token) {
+		this.tokens.push(token);
+		this.tokens[token.name] = token;
+	},
+
 	reinit : function (src) {
 		this.src = src;
 		this.idx = 0;
 	},
 	parse : function (src) {
-		var len = src.length;
-		//handle the empty program
-		if (!len) {
-			return '';
-		}
-
 		this.reinit(src);
 
 		var root = this.tokenize();
 		this.src = null; //cleanup
 
-		if (this.idx < len) {
+		if (this.idx < src.length) {
 			console.warn('SEN.parse: Trailing characters after last value')
 		}
 
-		return this.translate(root);
+		return root;
 	},
 
-	//accepts a token, returns a js value representing it
-	translate : function translate (token) {
-		var type = token.type;
-		if (this.translators.hasOwnProperty(type)) {
-			return this.translators[type](token);
-		}
-
-		throw new Error(
-			'Unknown token type ' + type + ', commencing pants-shitting');
-	},
-
-	translators : (function () {
-		var ret = {
-			string : function (token) {
-				return token.value;
-			},
-			sexp : function (token) {
-				return token.value.map(parser.translate, parser);
-			},
-			plist : function (token) {
-				return token.value.reduce(dictKey, {});
-			}
-		};
-		ret.atom = ret.symbol = ret.number = ret.string;
-
-		return ret;
-
-		function dictKey (ret, pair) {
-			//I dare you to say this 3 times fast
-			ret[pair.key.value] = parser.translate(pair.value);
-			return ret;
-		}
-	})(),
-
+	//TODO: better API? keep track of line/columns?
 	current : function () {
 		return this.src[this.idx];
 	},
@@ -105,277 +83,90 @@ var parser = {
 };
 
 parser.tokenize = function () {
-	var ch = this.src[this.idx];
+	var ch = parser.current(),
+		value = this.VOID, tok;
 
 	if (!ch) {
 		return '';
 	}
-	else if (ch === TK.COMMENT) {
-		this.skipLine();
-		return this.tokenize();
+
+	for (var i = 0; i < this.tokens.length; value = this.VOID, i++) {
+		tok = this.tokens[i];
+
+		if (tok.startsWith(ch)) {
+			value = tok.tokenize();
+		}
+
+		//this sucks
+		if (value !== this.VOID) {
+			break;
+		}
 	}
 
-	if (ch === TK.BEGIN_SEXP) {
-		return this.sexp.tokenize();
+	if (!value) {
+		throw new SyntaxError('Could not handle char ' + ch);
 	}
-	else if (ch === TK.STRING) {
-		return this.string.tokenize();
-	}
-	else if (ch >= '0' && ch <= '9') {
-		return this.number.tokenize();
-	}
-	return this.atom.tokenize();
+	return value;
 };
 
-parser.string = {
-	special : {
-		'b' : '\b',
-		'f' : '\f',
-		'n' : '\n',
-		'r' : '\r',
-		't' : '\t'
+parser.registerToken({
+	name : 'sexp',
+
+	startsWith : function (ch) {
+		return ch === TK.BEGIN_SEXP;
 	},
 
 	tokenize : function () {
-		var ret = {
-			type  : 'string',
-			value : ''
-		};
+		//we're on a (, skip it
+		parser.skip();
 
-		//we're on a ", move onto the next char
-		var ch = parser.nextChar(),
-			escape = false;
+		var ch = parser.current(),
+			ret = [],
+			child;
 
-		while (true) {
-			if (ch === TK.STRING && !escape) {
-				break;
-			}
-			else if (!ch) {
-				throw new SyntaxError("Unterminated string")
+		while (ch !== TK.END_SEXP) {
+			if (!ch) {
+				//TODO: find a way to do graceful event failure
+				throw new SyntaxError('Unbalanced sexp')
 			}
 
-			if (escape) {
-				if (this.special.hasOwnProperty(ch)) {
-					ch = this.special[ch];
-				}
-				else if (ch === 'u') {
-					ch = this.getUnicode();
-				}
-				escape = false;
+			ret.push(parser.tokenize());
 
-				ret.value += ch;
-			}
-			else if (ch === TK.ESCAPE) {
-				escape = true;
-			}
-			else {
-				ret.value += ch;
-			}
-
-			ch = parser.nextChar();
+			parser.skipWhitespace();
+			ch = parser.current();
 		}
 
-		//once again, we're on a ", we have to let go.
+		//skip over closing )
 		parser.skip();
 
 		return ret;
-	},
-
-	getUnicode : function () {
-		//stolen from Douglas Crockford's json-parse.js
-		var unicode = 0, hex;
-
-		for (var i = 0; i < 4; i++) {
-			hex = parseInt(parser.nextChar(), 16);
-
-			if (isNaN(hex)) {
-				throw new SyntaxError('Illegal character in unicode string');
-			}
-			unicode = unicode * 16 + hex;
-		}
-
-		return String.fromCharCode(unicode);
 	}
-};
+});
 
-parser.atom = {
+parser.registerToken({
+	name : 'atom',
+
 	not : TruthMap([
-		TK.SEPARATOR,
-		TK.NEWLINE,
-
-		TK.BEGIN_SEXP,
-		TK.END_SEXP,
-
-		TK.COMMENT
+		TK.BEGIN_SEXP, TK.END_SEXP,
+		TK.SEPARATOR
 	]),
 
-	special : {
-		'nil' : null,
-		't'   : true,
+	startsWith : function (ch) {
+		return true;
 	},
 
 	tokenize : function () {
-		var ret = {
-			type   : 'atom',
-			value  : ''
-		};
-
-		var ch = parser.current();
-
-		if (ch === TK.SYMBOL_KEY) {
-			ret.type = 'symbol';
-			ch = parser.nextChar();
-		}
+		var ch = parser.current(),
+			ret = '';
 
 		while (ch && !this.not[ch]) {
-			ret.value += ch;
+			ret += ch;
 			ch = parser.nextChar();
 		}
 
-		if (ret.type !== 'symbol' && this.special.hasOwnProperty(ret.value)) {
-			ret.value = this.special[ret.value];
-		}
-
 		return ret;
 	}
-};
-
-parser.number = {
-	starts : TruthMap([
-		0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0,
-		'+', '-', '.', '#'
-	]),
-
-	tokenize : function () {
-		var ret = {
-			type : 'number',
-			value : ''
-		};
-
-		ret.value = this.nextNumber();
-
-		return ret;
-	},
-
-	nextNumber : function () {
-		var ch = parser.current(),
-			num = '';
-
-		while (ch && ch >= '0' && ch <= '9') {
-			num += ch;
-			ch = parser.nextChar()
-		}
-
-		return Number(num);
-	}
-};
-
-parser.sexp = {
-	tokenize : function () {
-		//a special case of sexps is the property-list, plist
-		if (parser.peek() === TK.SYMBOL_KEY) {
-			return parser.plist.tokenize();
-		}
-
-		var ret = {
-			type   : 'sexp',
-			value  : [],
-		};
-
-		//we're on a (, move to next non-whitespace char
-		parser.skip();
-		parser.skipWhitespace();
-
-		var ch = parser.current(),
-			child;
-		while (ch !== TK.END_SEXP) {
-			if (!ch) {
-				throw new SyntaxError('Unbalanced sexp');
-			}
-
-			child = parser.tokenize();
-			ret.value.push(child);
-
-			parser.skipWhitespace();
-			ch = parser.current();
-		}
-
-		//move over the )
-		parser.skip();
-
-		return ret;
-	}
-};
-parser.plist = {
-	tokenize : function () {
-		var ret = {
-			type    : 'plist',
-			value   : [],
-		};
-
-		//we're on a (, move past that and whitespace
-		parser.skip();
-		parser.skipWhitespace();
-
-		var ch = parser.current(),
-			key, value;
-		//before we continue, I would like to apologize to several people:
-		//my mother, who through years of abuse has only made me come to this;'
-		//my father, who had to put up with my mother and I;
-		//my imaginary girlfriend, who took A LOT of crap;
-		//to you, my good reader, for betraying a piece of your soul in this
-		// stranger's journey.
-		//last but not least, to future me. I'm sorry.
-		while (ch !== TK.END_SEXP) {
-			if (!ch) {
-				throw new SyntaxError('unbalanced sexp');
-			}
-
-			key = this.tokenizeKey();
-			parser.skipWhitespace();
-
-			value = this.tokenizeValue();
-			parser.skipWhitespace();
-
-			ret.value.push({
-				key   : key,
-				value : value
-			});
-
-			ch = parser.current();
-		}
-
-		//move over the )
-		parser.skip();
-
-		return ret;
-	},
-
-	tokenizeKey : function () {
-		var key = parser.tokenize();
-
-		//because nil (null) is a possible value, we have to strictly check
-		// against the empty string as a no-value
-		if (key.value === '') {
-			throw new SyntaxError('keyless');
-		}
-		else if (key.type !== 'symbol') {
-			throw new SyntaxError('plist key must be a symbol');
-		}
-
-		return key;
-	},
-	tokenizeValue : function () {
-		var value = parser.tokenize();
-
-		//see comment in tokenizeKey
-		if (value.value === '') {
-			throw new SyntaxError('valueless tramp');
-		}
-
-		return value;
-	}
-};
+});
 
 //utility method
 function TruthMap (keys) {
