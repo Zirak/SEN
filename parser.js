@@ -15,9 +15,7 @@ var parser = {
 	// are saved in the order they were added, but you can also access them
 	// using individual token names. so for instance:
 	// parser.tokens[0] === parser.tokens.sexp
-	//tokens are ordered from the most complex to the simplest. in our case,
-	// the sexp which branches into every other value is handled first,
-	// and the atom which is the default value is handled last
+	//tokens should be ordered by priority
 	tokens : [],
 
 	registerToken : function (token) {
@@ -118,9 +116,7 @@ parser.registerToken({
 
 	tokenize : function () {
 		//we're on a (, skip it
-		parser.skip();
-
-		var ch = parser.current(),
+		var ch = parser.nextChar(),
 			ret = [],
 			child;
 
@@ -144,6 +140,42 @@ parser.registerToken({
 });
 
 parser.registerToken({
+	name : 'string',
+
+	startsWith : function (ch) {
+		return ch === TK.STRING;
+	},
+
+	tokenize : function () {
+		//we're on a " right now
+		var ch = parser.nextChar(),
+			ret = '',
+			escape = false;
+
+		while (ch !== TK.STRING || escape) {
+			if (!ch) {
+				throw new SyntaxError('Unterminated string');
+			}
+
+			if (ch === TK.ESCAPE && !escape) {
+				escape = true;
+			}
+			else {
+				ret += ch;
+				escape = false;
+			}
+
+			ch = parser.nextChar();
+		}
+
+		//skip over the ending "
+		parser.skip();
+
+		return ret;
+	}
+});
+
+parser.registerToken({
 	name : 'atom',
 
 	not : TruthMap([
@@ -156,8 +188,9 @@ parser.registerToken({
 	},
 
 	tokenize : function () {
-		var ch = parser.current(),
-			ret = '';
+		var ret = '';
+
+		var ch = parser.current();
 
 		while (ch && !this.not[ch]) {
 			ret += ch;
