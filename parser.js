@@ -22,6 +22,9 @@ var parser = {
 		this.tokens.push(token);
 		this.tokens[token.name] = token;
 	},
+	registerTokens : function (arr) {
+		arr.map(this.registerToken, this);
+	},
 
 	reinit : function (src) {
 		this.src = src;
@@ -107,7 +110,7 @@ parser.tokenize = function () {
 	return value;
 };
 
-parser.registerToken({
+var sexp = {
 	name : 'sexp',
 
 	startsWith : function (ch) {
@@ -137,9 +140,9 @@ parser.registerToken({
 
 		return ret;
 	}
-});
+}
 
-parser.registerToken({
+var string = {
 	name : 'string',
 
 	startsWith : function (ch) {
@@ -173,9 +176,23 @@ parser.registerToken({
 
 		return ret;
 	}
-});
+};
 
-parser.registerToken({
+var symbol = {
+	name : 'symbol',
+
+	startsWith : function (ch) {
+		return ch === TK.SYMBOL_KEY;
+	},
+
+	tokenize : function () {
+		parser.skip();
+
+		return atom.tokenize();
+	}
+};
+
+var atom = {
 	name : 'atom',
 
 	not : TruthMap([
@@ -199,7 +216,12 @@ parser.registerToken({
 
 		return ret;
 	}
-});
+};
+
+parser.registerTokens([
+	sexp,
+	string, symbol, atom
+]);
 
 //utility method
 function TruthMap (keys) {
