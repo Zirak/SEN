@@ -14,7 +14,7 @@ var parser = {
 	//this variable abuses the fact that arrays are regular objects. tokens
 	// are saved in the order they were added, but you can also access them
 	// using individual token names. so for instance:
-	// parser.tokens[0] === parser.tokens.sexp
+	// parser.tokens[0] === parser.tokens.list
 	//tokens should be ordered by priority
 	tokens : [],
 
@@ -110,18 +110,25 @@ parser.tokenize = function () {
 	return value;
 };
 
-var sexp = {
-	name : 'sexp',
+var list = {
+	name : 'list',
 
 	startsWith : function (ch) {
 		return ch === TK.BEGIN_SEXP;
 	},
 
 	tokenize : function () {
-		//we're on a (, skip it
-		var ch = parser.nextChar(),
-			ret = [],
-			child;
+		//we're on a (, skip it and any whitespace
+		parser.skip();
+		parser.skipWhitespace();
+
+		var ch = parser.current(),
+			ret = [];
+
+		//a list who's first value is a symbol is a plist
+		if (symbol.startsWith(ch)) {
+			return plist.tokenize();
+		}
 
 		while (ch !== TK.END_SEXP) {
 			if (!ch) {
@@ -140,7 +147,36 @@ var sexp = {
 
 		return ret;
 	}
-}
+};
+
+//this will not be added, since it's derived from the list token
+var plist = {
+	name : 'plist',
+
+	tokenize : function () {
+		var ch = parser.current(),
+			ret = {};
+
+		var key, value;
+		while (ch !== TK.END_SEXP) {
+			if (!ch) {
+				throw new SyntaxError('Unbalanced sexp');
+			}
+
+			key = parser.tokenize();
+			parser.skipWhitespace();
+			value = parser.tokenize();
+
+			ret[key] = value;
+			ch = parser.current();
+		}
+
+		//skip over closing )
+		parser.skip();
+
+		return ret;
+	}
+};
 
 var string = {
 	name : 'string',
@@ -219,7 +255,7 @@ var atom = {
 };
 
 parser.registerTokens([
-	sexp,
+	list,
 	string, symbol, atom
 ]);
 
