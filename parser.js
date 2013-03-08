@@ -84,6 +84,12 @@ parser.tokenize = function () {
 	if (!ch) {
 		return '';
 	}
+	//a comment is not defined as a value, but as an exception to regular rules.
+	//therefore, it will not be recognized unless we explicitly recognize it.
+	if (comment.startsWith(ch)) {
+		comment.parse();
+		return parser.tokenize();
+	}
 
 	for (var i = 0; i < this.tokens.length; value = undefined, i++) {
 		tok = this.tokens[i];
@@ -104,6 +110,16 @@ parser.tokenize = function () {
 	return value;
 };
 
+var comment = {
+	startsWith : function (ch) {
+		return ch === TK.COMMENT;
+	},
+
+	parse : function () {
+		parser.skipLine();
+	}
+};
+
 var list = {
 	name : 'list',
 
@@ -112,6 +128,7 @@ var list = {
 	},
 
 	tokenize : function () {
+
 		//we're on a (, skip it and any whitespace
 		parser.skip();
 		parser.skipWhitespace();
@@ -210,7 +227,10 @@ var string = {
 	tokenize : function () {
 		//we're on a " right now
 		var ch = parser.nextChar(),
-			ret = '',
+			ret = {
+				value : '',
+				translate : this.translate
+			},
 			escape = false;
 
 		while (ch !== TK.STRING || escape) {
@@ -222,7 +242,7 @@ var string = {
 				escape = true;
 			}
 			else {
-				ret += ch;
+				ret.value += ch;
 				escape = false;
 			}
 
@@ -233,7 +253,9 @@ var string = {
 		parser.skip();
 
 		return ret;
-	}
+	},
+
+	translate : literalValue
 };
 
 var symbol = {
@@ -249,7 +271,10 @@ var symbol = {
 		}
 		parser.skip();
 
-		return atom.tokenize();
+		var ret = atom.tokenize();
+		ret.translate = literalValue;
+
+		return ret;
 	}
 };
 
@@ -258,8 +283,17 @@ var atom = {
 
 	not : TruthMap([
 		TK.BEGIN_SEXP, TK.END_SEXP,
-		TK.SEPARATOR
+		TK.SEPARATOR, TK.NEWLINE,
+		TK.COMMENT
 	]),
+
+	special : (function () {
+		var ret = {};
+		ret[TK.NIL] = null;
+		ret[TK.TRUE] = true;
+
+		return ret;
+	})(),
 
 	startsWith : function (ch) {
 		return true;
@@ -282,7 +316,12 @@ var atom = {
 	},
 
 	translate : function () {
-		return this.value;
+		var val = this.value;
+
+		if (atom.special.hasOwnProperty(val)) {
+			val = atom.special[val];
+		}
+		return val;
 	}
 };
 
