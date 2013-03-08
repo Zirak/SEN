@@ -2,7 +2,7 @@
 
 \usepackage[utf8]{inputenc}
 \usepackage[margin=1.5cm]{geometry}
-\usepackage{syntax}
+\usepackage[rounded]{syntax}
 \usepackage{rail}
 
 \setlength{\grammarindent}{4em}
@@ -23,45 +23,49 @@
 	<program> $\to$ <value>
 		\alt $\epsilon$
 
-	<value> $\to$ <atom>
-		\alt <symbol>
-		\alt <string>
-		\alt <list>
+	<value> $\to$ <list>
 		\alt <plist>
+		\alt <string>
+		\alt <number>
+		\alt <atom>
+		
+	<list> $\to$ `(' <ws?> <list-values> <ws?> `)'
 
+	<list-values> $\to$ <value> <ws> <list-values>
+		\alt $\epsilon$
+		
+	<string> $\to$ `"' <chars> `"'
+
+	<chars> $\to$ <unicode-char> <chars>
+		\alt `\\' <unicode-char> <chars>
+		\alt $\epsilon$
+
+	<symbol> $\to$ `:' <atom>
+	
 	<atom> $\to$ `nil'
 		\alt `t'
 		\alt <anything>
 
-	<symbol> $\to$ `:' <atom>
+	<plist> $\to$ `(' <ws?> <pairs> <ws?> `)'
 
-	<string> $\to$ `"' <chars> `"'
-
-	<chars> $\to$ <unicode-char> <chars>
-		\alt <escaped-char> <chars>
-		\alt $\epsilon$
-
-	<escaped-char> $\to$ `\\b'
-		\alt `\\f'
-		\alt `\\n'
-		\alt `\\r'
-		\alt `\\t'
-		\alt `\\u' <hex-digit> <hex-digit> <hex-digit> <hex-digit>
-
-	<list> $\to$ `(' <list-values> `)'
-
-	<list-values> $\to$ <value> <list-values>
-		\alt $\epsilon$
-
-	<plist> $\to$ `(' <pairs> `)'
-
-	<pairs> $\to$ <symbol> <value> <pairs>
+	<pairs> $\to$ <symbol> <ws> <value> <ws> <pairs>
 		\alt $\epsilon$
 
 	<comment> $\to$ `;' <comment-chars>
 
 	<comment-chars> $\to$ <not-line-terminator> <comment-chars>
 		\alt $\epsilon$
+		
+	<ws> $\to$ <white> <ws?>
+	
+	<ws?> $\to$ <white> <ws?>
+		\alt $\epsilon$
+		
+	<white> $\to$ <space>
+		\alt <tab>
+		\alt <form-feed>
+		\alt <newline>
+		\alt <carriage-return>
 \end{grammar}
 
 \section{Individual Components}
@@ -72,14 +76,69 @@
 \end{rail}
 
 \begin{grammar}
-	<value> $\to$ <atom>
-		\alt <symbol>
-		\alt <string>
-		\alt <list>
+	<value> $\to$ <list>
 		\alt <plist>
+		\alt <string>
+		\alt <number>
+		\alt <atom>
 \end{grammar}
 
 A $value$ is any of the possible SEN structures.
+
+\subsection{Lists}
+\begin{rail}
+	list : '(' ( () + value ) ')'
+\end{rail}
+
+\begin{grammar}
+	<list> $\to$ `(' <ws?> <list-values> <ws?> `)'
+
+	<list-values> $\to$ <value> <ws> <list-values>
+		\alt $\epsilon$
+\end{grammar}
+
+A $list$ is one or more $value$s, separated by spaces. They do not have to be homogeneous; that is, you can mix up the value types. You may arbitrarily nest lists to easily create complex structures.
+
+
+\subsection{Property-Lists}
+\begin{rail}
+	plist : '(' (() + (symbol value)) ')'
+\end{rail}
+
+\begin{grammar}
+	<plist> $\to$ `(' <ws?> <pairs> <ws?> `)'
+
+	<pairs> $\to$ <symbol> <ws> <value> <ws> <pairs>
+		\alt $\epsilon$
+\end{grammar}
+
+$p-lists$, or $property-lists$, can be considered a poor man's hash-table. They are made of one or more $key => value$ pairs, where the key must be a $symbol$, and the value may be any $value$ allowed in the language. The $key$ and $value$ are separated by a space, and so are each pair. Like regular $lists$, $p-lists$ are heterogenous.
+
+\subsection{Strings}
+\begin{rail}
+	string : '"' (() + ('\symbol{92}'? unicodeChar )) '"'
+\end{rail}
+
+\begin{grammar}
+	<string> $\to$ `"' <chars> `"'
+
+	<chars> $\to$ <unicode-char> <chars>
+		\alt `\\' <unicode-char> <chars>
+		\alt $\epsilon$
+\end{grammar}
+
+A $string$ is what you may be familiar with from the C family. $Strings$ are delimited by the double-quote character. Any Unicode character may be written inside the double-quotes, with the exception of the double-quote and the backslash, which must be escaped. To escape a character, one writes the backslash character, followed by the desired character. For example: $\backslash "$, which results in the literal double-quote character; $\backslash p$, which results in the character $p$.
+
+\subsection{Symbols}
+\begin{rail}
+	symbol : ':' atom
+\end{rail}
+
+\begin{grammar}
+	<symbol> $\to$ `:' <atom>
+\end{grammar}
+
+A $symbol$ is a literal value. While an $atom$ may be subject to interpretations (for example, $t$ may turn to $true$ in a target language), a $symbol$ will always appear as-is.
 
 \subsection{Atoms}
 \begin{rail}
@@ -95,93 +154,6 @@ A $value$ is any of the possible SEN structures.
 An $atom$ is any of the special constructs $nil$ or $t$, or any combination of characters, excluding the space character and parentheses $()$. In addition, an $atom$ may not begin with the colon, $:$.
 
 The $nil$ value is akin to $null$ or $none$ is many other programming languages. It is also used as the de-facto $false$. $t$ is akin to $true$.
-
-\subsection{Symbols}
-\begin{rail}
-	symbol : ':' atom
-\end{rail}
-
-\begin{grammar}
-	<symbol> $\to$ `:' <atom>
-\end{grammar}
-
-A $symbol$ is a literal value. While an $atom$ may be subject to interpretations (for example, $t$ may turn to $true$ in a target language), a $symbol$ will always appear as-is.
-
-\subsection{Strings}
-\begin{rail}
-	string : '"' (() + (
-		unicodeChar | (
-		'\symbol{92}' (
-			[backspace] 'b' |
-			[form feed] 'f' |
-			[line feed] 'n' |
-			[carriage return] 'r' |
-			[tab] 't' |
-			('u' fourHexDigits))))
-	) '"'
-\end{rail}
-
-\begin{grammar}
-	<string> $\to$ `"' <char> `"'
-
-	<char> $\to$ <unicode-char> <char>
-		\alt <escaped-char> <char>
-		\alt $\epsilon$
-
-	<escaped-char> $\to$ `\\b'
-		\alt `\\f'
-		\alt `\\n'
-		\alt `\\r'
-		\alt `\\t'
-		\alt `\\u' <hex-digit> <hex-digit> <hex-digit> <hex-digit>
-\end{grammar}
-
-A $string$ is what you may be familiar with from the C family. $Strings$ are delimited by the double-quote character. Any Unicode character may be written inside the double-quotes, with the exception of the double-quote and the backslash, which must be escaped. To escape a character, one writes the backslash character, followed by the desired character. For example: $\backslash "$, which results in the literal double-quote character; $\backslash p$, which results in the character $p$.
-
-Several common characters which may be difficult to write directly are represented by an escape-sequence:
-
-\begin{center}
-\begin{tabular}{l c r}
-	Sequence	   & Meaning		 & Unicode \\
-	\hline
-	$\backslash b$ & backspace		 & \texttt{U+0008} \\
-	$\backslash f$ & form-feed		 & \texttt{U+000C} \\
-	$\backslash n$ & line-feed		 & \texttt{U+000A} \\
-	$\backslash r$ & carriage-return & \texttt{U+000D} \\
-	$\backslash t$ & tab			 & \texttt{U+0009}
-\end{tabular}
-\end{center}
-
-Another escape-sequence, $\backslash u$, may be used to represent unicode values inside the range \texttt{U+0000} $\to$ \texttt{U+FFFF}, as such $\backslash u XXXX$ where each $X$ is a hexadecimal digit (case insensitive). For instance, the tab character \texttt{U+0009} may be written as $\backslash u 0009$.
-
-\subsection{Lists}
-\begin{rail}
-	list : '(' ( () + value ) ')'
-\end{rail}
-
-\begin{grammar}
-	<list> $\to$ `(' <list-values> `)'
-
-	<list-values> $\to$ <value> <list-values>
-		\alt $\epsilon$
-\end{grammar}
-
-A $list$ is one or more $value$s, separated by spaces. They do not have to be homogeneous; that is, you can mix up the value types. You may arbitrarily nest lists to easily create complex structures.
-
-
-\subsection{Property-Lists}
-\begin{rail}
-	plist : '(' (() + (symbol value)) ')'
-\end{rail}
-
-\begin{grammar}
-	<plist> $\to$ `(' <pairs> `)'
-
-	<pairs> $\to$ <symbol> <value> <pairs>
-		\alt $\epsilon$
-\end{grammar}
-
-$p-lists$, or $property-lists$, can be considered a poor man's hash-table. They are made of one or more $key => value$ pairs, where the key must be a $symbol$, and the value may be any $value$ allowed in the language. The $key$ and $value$ are separated by a space, and so are each pair. Like regular $lists$, $p-lists$ are heterogenous.
 
 \subsection{Comments}
 \begin{rail}
