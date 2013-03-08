@@ -8,19 +8,10 @@ if (typeof SEN === 'undefined') {
 //SEN.parse will be exposed at the end
 
 var parser = {
-	//use this property to signify the lack of a valid value
-	VOID : {},
-
-	//this variable abuses the fact that arrays are regular objects. tokens
-	// are saved in the order they were added, but you can also access them
-	// using individual token names. so for instance:
-	// parser.tokens[0] === parser.tokens.list
-	//tokens should be ordered by priority
 	tokens : [],
 
 	registerToken : function (token) {
 		this.tokens.push(token);
-		this.tokens[token.name] = token;
 	},
 	registerTokens : function (arr) {
 		arr.map(this.registerToken, this);
@@ -31,6 +22,9 @@ var parser = {
 		this.idx = 0;
 	},
 	parse : function (src) {
+		return this.toAST(src).translate();
+	},
+	toAST : function (src) {
 		this.reinit(src);
 
 		var root = this.tokenize();
@@ -85,13 +79,13 @@ var parser = {
 
 parser.tokenize = function () {
 	var ch = parser.current(),
-		value = this.VOID, tok;
+		value, tok;
 
 	if (!ch) {
 		return '';
 	}
 
-	for (var i = 0; i < this.tokens.length; value = this.VOID, i++) {
+	for (var i = 0; i < this.tokens.length; value = undefined, i++) {
 		tok = this.tokens[i];
 
 		if (tok.startsWith(ch)) {
@@ -99,7 +93,7 @@ parser.tokenize = function () {
 		}
 
 		//this sucks
-		if (value !== this.VOID) {
+		if (value) {
 			break;
 		}
 	}
@@ -123,7 +117,10 @@ var list = {
 		parser.skipWhitespace();
 
 		var ch = parser.current(),
-			ret = [];
+			ret = {
+				value : [],
+				translate : this.translate
+			};
 
 		//a list who's first value is a symbol is a plist
 		if (symbol.startsWith(ch)) {
@@ -136,7 +133,7 @@ var list = {
 				throw new SyntaxError('Unbalanced sexp')
 			}
 
-			ret.push(parser.tokenize());
+			ret.value.push(parser.tokenize());
 
 			parser.skipWhitespace();
 			ch = parser.current();
@@ -146,6 +143,14 @@ var list = {
 		parser.skip();
 
 		return ret;
+	},
+
+	translate : function () {
+		return this.value.map(innerTranslate);
+
+		function innerTranslate (tok) {
+			return tok.translate();
+		}
 	}
 };
 
@@ -155,7 +160,10 @@ var plist = {
 
 	tokenize : function () {
 		var ch = parser.current(),
-			ret = {};
+			ret = {
+				value : [],
+				translate : this.translate
+			};
 
 		var key, value;
 		while (ch !== TK.END_SEXP) {
@@ -163,11 +171,14 @@ var plist = {
 				throw new SyntaxError('Unbalanced sexp');
 			}
 
-			key = parser.tokenize();
+			key = symbol.tokenize();
 			parser.skipWhitespace();
 			value = parser.tokenize();
+			parser.skipWhitespace();
 
-			ret[key] = value;
+			ret.value.push({
+				key : key, value : value
+			});
 			ch = parser.current();
 		}
 
@@ -175,6 +186,17 @@ var plist = {
 		parser.skip();
 
 		return ret;
+	},
+
+	translate : function () {
+		var obj = this.value;
+		return Object.keys(obj).reduce(pairTranslate, {});
+
+		function pairTranslate (ret, key) {
+			var pair = obj[key];
+			ret[pair.key.translate()] = pair.value.translate();
+			return ret;
+		}
 	}
 };
 
@@ -222,6 +244,9 @@ var symbol = {
 	},
 
 	tokenize : function () {
+		if (parser.current() !== TK.SYMBOL_KEY) {
+			throw new SyntaxError('symbols must begin with ' + TK.SYMBOL_KEY);
+		}
 		parser.skip();
 
 		return atom.tokenize();
@@ -241,25 +266,33 @@ var atom = {
 	},
 
 	tokenize : function () {
-		var ret = '';
+		var ret = {
+			value : '',
+			translate : this.translate
+		}
 
 		var ch = parser.current();
 
 		while (ch && !this.not[ch]) {
-			ret += ch;
+			ret.value += ch;
 			ch = parser.nextChar();
 		}
 
 		return ret;
+	},
+
+	translate : function () {
+		return this.value;
 	}
 };
 
 parser.registerTokens([
 	list,
-	string, symbol, atom
+	string, atom
 ]);
 
 //utility method
+function literalValue () { return this.value; }
 function TruthMap (keys) {
 	return keys.reduce(assignTrue, Object.create(null));
 
