@@ -8,6 +8,10 @@ if (typeof SEN === 'undefined') {
 //SEN.parse will be exposed at the end
 
 var parser = {
+	//the value representing the lack of a token. take attention of it when
+	// translating tokens
+	VOID : {},
+
 	tokens : [],
 
 	registerToken : function (token) {
@@ -82,7 +86,7 @@ parser.tokenize = function () {
 		value, tok;
 
 	if (!ch) {
-		return '';
+		return this.VOID;
 	}
 	//a comment is not defined as a value, but as an exception to regular rules.
 	//therefore, it will not be recognized unless we explicitly recognize it.
@@ -98,16 +102,14 @@ parser.tokenize = function () {
 			value = tok.tokenize();
 		}
 
-		//this sucks
 		if (value) {
-			break;
+			return value;
 		}
 	}
 
 	if (!value) {
 		throw new SyntaxError('Could not handle char ' + ch);
 	}
-	return value;
 };
 
 var comment = {
@@ -127,22 +129,29 @@ var list = {
 		return ch === TK.BEGIN_SEXP;
 	},
 
-	tokenize : function () {
+	token : function (value) {
+		return {
+			type : 'list',
+			translate : this.translate,
+			value : value || []
+		};
+	},
 
+	tokenize : function () {
 		//we're on a (, skip it and any whitespace
 		parser.skip();
 		parser.skipWhitespace();
 
 		var ch = parser.current(),
-			ret = {
-				value : [],
-				translate : this.translate
-			};
+			child,
+			val;
 
 		//a list who's first value is a symbol is a plist
 		if (symbol.startsWith(ch)) {
 			return plist.tokenize();
 		}
+
+		val = [];
 
 		while (ch !== TK.END_SEXP) {
 			if (!ch) {
@@ -150,7 +159,10 @@ var list = {
 				throw new SyntaxError('Unbalanced sexp')
 			}
 
-			ret.value.push(parser.tokenize());
+			child = parser.tokenize();
+			if (child !== parser.VOID) {
+				val.push(child);
+			}
 
 			parser.skipWhitespace();
 			ch = parser.current();
@@ -159,7 +171,7 @@ var list = {
 		//skip over closing )
 		parser.skip();
 
-		return ret;
+		return this.token(val);
 	},
 
 	translate : function () {
@@ -175,12 +187,17 @@ var list = {
 var plist = {
 	name : 'plist',
 
+	token : function (value) {
+		return {
+			type : 'plist',
+			translate : this.translate,
+			value : value || []
+		};
+	},
+
 	tokenize : function () {
 		var ch = parser.current(),
-			ret = {
-				value : [],
-				translate : this.translate
-			};
+			val = [];
 
 		var key, value;
 		while (ch !== TK.END_SEXP) {
@@ -193,7 +210,12 @@ var plist = {
 			value = parser.tokenize();
 			parser.skipWhitespace();
 
-			ret.value.push({
+			//TODO: extract to atom
+			if (value === parser.VOID) {
+				value = { value : null, translate : literalValue };
+			}
+
+			val.push({
 				key : key, value : value
 			});
 			ch = parser.current();
@@ -202,7 +224,7 @@ var plist = {
 		//skip over closing )
 		parser.skip();
 
-		return ret;
+		return this.token(val);
 	},
 
 	translate : function () {
@@ -224,13 +246,18 @@ var string = {
 		return ch === TK.STRING;
 	},
 
+	token : function (value) {
+		return {
+			type : 'string',
+			translate : this.translate,
+			value : value || ""
+		};
+	},
+
 	tokenize : function () {
 		//we're on a " right now
 		var ch = parser.nextChar(),
-			ret = {
-				value : '',
-				translate : this.translate
-			},
+			val = '',
 			escape = false;
 
 		while (ch !== TK.STRING || escape) {
@@ -242,7 +269,7 @@ var string = {
 				escape = true;
 			}
 			else {
-				ret.value += ch;
+				val += ch;
 				escape = false;
 			}
 
@@ -252,7 +279,7 @@ var string = {
 		//skip over the ending "
 		parser.skip();
 
-		return ret;
+		return this.token(val);
 	},
 
 	translate : literalValue
@@ -272,7 +299,11 @@ var symbol = {
 		parser.skip();
 
 		var ret = atom.tokenize();
-		ret.translate = literalValue;
+
+		if (ret !== parser.VOID) {
+			ret.type = 'symbol';
+			ret.translate = literalValue;
+		}
 
 		return ret;
 	}
@@ -299,20 +330,28 @@ var atom = {
 		return true;
 	},
 
-	tokenize : function () {
-		var ret = {
-			value : '',
-			translate : this.translate
-		}
+	token : function (value) {
+		return {
+			type : 'atom',
+			translate : this.translate,
+			value : value || ''
+		};
+	},
 
-		var ch = parser.current();
+	tokenize : function () {
+		var val = '',
+			ch = parser.current();
 
 		while (ch && !this.not[ch]) {
-			ret.value += ch;
+			val += ch;
 			ch = parser.nextChar();
 		}
 
-		return ret;
+		if (val === '') {
+			return parser.VOID;
+		}
+
+		return this.token(val);
 	},
 
 	translate : function () {
