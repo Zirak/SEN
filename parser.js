@@ -285,6 +285,94 @@ var string = {
 	translate : literalValue
 };
 
+//TODO: remove exposure after debugging
+var number = window.number= {
+	name : 'number',
+
+	starts : TruthMap([
+		'#', '+', '-'
+	]),
+	startsWith : function (ch) {
+		return this.starts[ch] || this.isDigit(ch);
+	},
+
+	token : function (value, radix) {
+		return {
+			type : 'number',
+			translate : this.translate,
+			value : value || '',
+			radix : radix || 10
+		}
+	},
+
+	tokenize : function () {
+		var ch = parser.current();
+
+		if (ch === '#') {
+			return this.tokenizeBased();
+		}
+		return this.tokenizeLiteral();
+	},
+
+	tokenizeLiteral : function () {
+		var ch = parser.current(),
+			val = '',
+			sign = 1;
+
+		if (ch === '-') {
+			sign = -1;
+			ch = parser.nextChar();
+		}
+		else if (ch === '+') {
+			ch = parser.nextChar();
+		}
+
+		val += this.parseDigits();
+
+		if (ch === '.') {
+			parser.skip();
+			val += '.' + this.parseDigits();
+		}
+
+		var ret = this.token(val, 10);
+		ret.sign = sign;
+		return ret;
+	},
+
+	parseDigits : function (radix) {
+		var ch = parser.current(),
+			val = '';
+
+		while (ch && this.isDigit(ch)) {
+			val += ch;
+			ch = parser.nextChar();
+		}
+
+		return val;
+	},
+
+	translate : function () {
+		var n;
+		if (this.radix === 10) {
+			n = parseFloat(this.value);
+		}
+		n = parseInt(this.value, this.radix);
+
+		return this.sign * n;
+	},
+
+	digits : '0123456789abcdefghijklmnopqrstuvwxyz'.split(''),
+	digits10 : TruthMap('012345679'.split('')),
+	isDigit : function (ch, radix) {
+		ch = ch.toLowerCase();
+
+		if (!radix) {
+			return this.digits10[ch];
+		}
+		return this.digits.slice(0, radix).indexOf(ch) > -1;
+	}
+};
+
 var symbol = {
 	name : 'symbol',
 
@@ -366,7 +454,7 @@ var atom = {
 
 parser.registerTokens([
 	list,
-	string, atom
+	string, number, atom
 ]);
 
 //utility method
