@@ -1,3 +1,5 @@
+/* global SEN:true, TK:true */
+/* jshint devel:true*/
 if (typeof SEN === 'undefined') {
 	SEN = {};
 }
@@ -35,7 +37,7 @@ var parser = {
 		this.src = null; //cleanup
 
 		if (this.idx < src.length) {
-			console.warn('SEN.parse: Trailing characters after last value')
+			console.warn('SEN.parse: Trailing characters after last value');
 		}
 
 		return root;
@@ -77,7 +79,9 @@ var parser = {
 		}
 
 		//we may or may not be on an EOL. if we are, skip over it
-		ch === '\n' && this.skip();
+		if (ch === '\n') {
+			this.skip();
+		}
 	}
 };
 
@@ -156,7 +160,7 @@ var list = {
 		while (ch !== TK.END_SEXP) {
 			if (!ch) {
 				//TODO: find a way to do graceful event failure
-				throw new SyntaxError('Unbalanced sexp')
+				throw new SyntaxError('Unbalanced sexp');
 			}
 
 			child = parser.tokenize();
@@ -288,7 +292,7 @@ var string = {
 var number = {
 	name : 'number',
 
-	starts : TruthMap([
+	starts : truthMap([
 		'#', '+', '-'
 	]),
 	startsWith : function (ch) {
@@ -301,7 +305,7 @@ var number = {
 			translate : this.translate,
 			value : value || '',
 			radix : radix || 10
-		}
+		};
 	},
 
 	tokenize : function () {
@@ -351,7 +355,7 @@ var number = {
 		var ch = parser.current(),
 			val = '';
 
-		while (ch && this.isDigit(ch)) {
+		while (ch && this.isDigit(ch, radix)) {
 			val += ch;
 			ch = parser.nextChar();
 		}
@@ -361,8 +365,7 @@ var number = {
 
 	parseExponent : function (radix) {
 		var ch = parser.current(),
-			sign, digits,
-			val = '';
+			sign, digits;
 
 		if (!ch || ch.toLowerCase() !== 'e') {
 			throw new SyntaxError('number exponent error'); //meh
@@ -370,7 +373,7 @@ var number = {
 		parser.skip();
 
 		sign = this.parseSign();
-		digits = this.parseDigits();
+		digits = this.parseDigits(radix);
 
 		if (!digits) {
 			throw new SyntaxError('exponent cannot be blank');
@@ -436,7 +439,7 @@ var number = {
 	},
 
 	digits : '0123456789abcdefghijklmnopqrstuvwxyz'.split(''),
-	digits10 : TruthMap('0123456789'.split('')),
+	digits10 : truthMap('0123456789'.split('')),
 	isDigit : function (ch, radix) {
 		ch = ch.toLowerCase();
 
@@ -474,7 +477,7 @@ var symbol = {
 var atom = {
 	name : 'atom',
 
-	not : TruthMap([
+	not : truthMap([
 		TK.BEGIN_SEXP, TK.END_SEXP,
 		TK.SEPARATOR, TK.NEWLINE,
 		TK.COMMENT
@@ -488,7 +491,7 @@ var atom = {
 		return ret;
 	})(),
 
-	startsWith : function (ch) {
+	startsWith : function () {
 		return true;
 	},
 
@@ -532,8 +535,8 @@ parser.registerTokens([
 ]);
 
 //utility method
-function literalValue () { return this.value; }
-function TruthMap (keys) {
+function literalValue () { /*jshint validthis:true*/ return this.value; }
+function truthMap (keys) {
 	return keys.reduce(assignTrue, Object.create(null));
 
 	function assignTrue (map, key) {
