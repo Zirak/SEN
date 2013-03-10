@@ -316,22 +316,24 @@ var number = window.number= {
 
 	tokenizeLiteral : function () {
 		var ch = parser.current(),
-			val,
-			sign;
+			sign, integer = '', decimal = '', exponent = '',
+			val;
 
 		sign = this.parseSign();
-		val  = this.parseDigits();
+		integer = this.parseDigits();
 
 		ch = parser.current();
 		if (ch === '.') {
 			parser.skip();
-			val += '.' + this.parseDigits();
+			decimal = '.' + this.parseDigits();
+		}
+		ch = parser.current();
+		if (ch === 'e' || ch === 'E') {
+			exponent = this.parseExponent();
 		}
 
-		var ret = this.token(val, 10);
-		ret.sign = sign;
-
-		return ret;
+		val = sign + integer + decimal + exponent;
+		return this.token(val, 10);
 	},
 
 	parseDigits : function (radix) {
@@ -343,16 +345,36 @@ var number = window.number= {
 			ch = parser.nextChar();
 		}
 
-		return val;
+		return val.toLowerCase();
+	},
+
+	parseExponent : function (radix) {
+		var ch = parser.current(),
+			sign, digits,
+			val = '';
+
+		if (!ch || ch.toLowerCase() !== 'e') {
+			throw new SyntaxError('number exponent error'); //meh
+		}
+		parser.skip();
+
+		sign = this.parseSign();
+		digits = this.parseDigits();
+
+		if (!digits) {
+			throw new SyntaxError('exponent cannot be blank');
+		}
+
+		return 'e' + sign + digits;
 	},
 
 	parseSign : function () {
 		var ch = parser.current(),
-			ret = +1;
+			ret = '+';
 
 		switch (ch) {
 		case '-':
-			ret = -1;
+			ret = '-';
 			//intentional fall-through
 		case '+':
 			parser.skip();
@@ -372,11 +394,11 @@ var number = window.number= {
 			n = parseInt(this.value, this.radix);
 		}
 
-		return this.sign * n;
+		return n;
 	},
 
 	digits : '0123456789abcdefghijklmnopqrstuvwxyz'.split(''),
-	digits10 : TruthMap('012345679'.split('')),
+	digits10 : TruthMap('0123456789'.split('')),
 	isDigit : function (ch, radix) {
 		ch = ch.toLowerCase();
 
