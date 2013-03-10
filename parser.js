@@ -285,8 +285,7 @@ var string = {
 	translate : literalValue
 };
 
-//TODO: remove exposure after debugging
-var number = window.number= {
+var number = {
 	name : 'number',
 
 	starts : TruthMap([
@@ -336,6 +335,18 @@ var number = window.number= {
 		return this.token(val, 10);
 	},
 
+	tokenizeBased : function () {
+		parser.skip(); //pass over #
+		var radix = this.parseRadix(),
+			sign = this.parseSign(),
+			digits = this.parseDigits(radix);
+
+		if (!digits) {
+			throw new SyntaxError('missing number in based literal');
+		}
+		return this.token(sign + digits, radix);
+	},
+
 	parseDigits : function (radix) {
 		var ch = parser.current(),
 			val = '';
@@ -382,6 +393,33 @@ var number = window.number= {
 		}
 
 		return ret;
+	},
+
+	parseRadix : function () {
+		var ch = parser.current(),
+			val = '';
+
+		while (ch && this.isDigit(ch)) {
+			val += ch;
+			ch = parser.nextChar();
+		}
+
+		if (!ch || ch.toLowerCase() !== 'r') {
+			throw new SyntaxError('number missing in #R');
+		}
+
+		var n = +val;
+		if (!val) {
+			throw new SyntaxError('radix missing in #R');
+		}
+		else if (val < 2 || val > 36) {
+			throw new SyntaxError('illegal radix for #R: ' + val);
+		}
+
+		//move past R
+		parser.skip();
+
+		return n;
 	},
 
 	translate : function () {
