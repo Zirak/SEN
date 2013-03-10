@@ -316,19 +316,13 @@ var number = window.number= {
 
 	tokenizeLiteral : function () {
 		var ch = parser.current(),
-			val = '',
-			sign = 1;
+			val,
+			sign;
 
-		if (ch === '-') {
-			sign = -1;
-			ch = parser.nextChar();
-		}
-		else if (ch === '+') {
-			ch = parser.nextChar();
-		}
+		sign = this.parseSign();
+		val  = this.parseDigits();
 
-		val += this.parseDigits();
-
+		ch = parser.current();
 		if (ch === '.') {
 			parser.skip();
 			val += '.' + this.parseDigits();
@@ -336,6 +330,7 @@ var number = window.number= {
 
 		var ret = this.token(val, 10);
 		ret.sign = sign;
+
 		return ret;
 	},
 
@@ -351,12 +346,31 @@ var number = window.number= {
 		return val;
 	},
 
+	parseSign : function () {
+		var ch = parser.current(),
+			ret = +1;
+
+		switch (ch) {
+		case '-':
+			ret = -1;
+			//intentional fall-through
+		case '+':
+			parser.skip();
+			break;
+		}
+
+		return ret;
+	},
+
 	translate : function () {
 		var n;
+
 		if (this.radix === 10) {
 			n = parseFloat(this.value);
 		}
-		n = parseInt(this.value, this.radix);
+		else {
+			n = parseInt(this.value, this.radix);
+		}
 
 		return this.sign * n;
 	},
