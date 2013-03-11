@@ -1,6 +1,4 @@
-<script src='https://raw.github.com/Zirak/SEN/master/tokens.js'></script>
-<script src='https://raw.github.com/Zirak/SEN/master/parser.js'></script>
-<script src='https://raw.github.com/Zirak/SEN/master/encoder.js'></script>
+<script src='https://raw.github.com/Zirak/SEN/master/sen.js'></script>
 
 <form name='container'>
 	<textarea name='sen' cols=80 rows=10>sen</textarea>
@@ -34,6 +32,7 @@
 	SEN.parse('a');
 	SEN.parse('(a)');
 	SEN.parse('(:a b)');
+	SEN.parse('"a"');
 
 	SEN.stringify(0);
 	SEN.stringify([0]);
