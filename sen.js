@@ -578,7 +578,10 @@ function str (val) {
 	var prevIndent, res;
 
 	switch (typeof val) {
-	case 'string': case 'number':
+	//TODO: make this smarter. a string may be represented by an atom.
+	case 'string':
+		return '"' + val + '"';
+	case 'number':
 		return String(val);
 
 	case 'boolean':
@@ -642,7 +645,7 @@ function str (val) {
 
 	function stringPair (obj, key) {
 		return (
-			TK.SYMBOL_KEY + str(key) +
+			TK.SYMBOL_KEY + String(key) +
 			TK.SEPARATOR + str(obj[key]) );
 	}
 }
