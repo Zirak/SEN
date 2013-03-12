@@ -429,7 +429,7 @@ var number = {
 
 	parseSign : function () {
 		var ch = parser.current(),
-			ret = '+';
+			ret = '';
 
 		switch (ch) {
 		case '-':
@@ -580,14 +580,19 @@ var lineSep = '',
 
 	indent = '';
 
+//h4x needed for atom detection
+var sepRe = new RegExp(
+	'\\' +Object.keys(SEPARATORS).join('|\\') + '|\\d',
+	'gi');
+
 //returns the SEN representation of val
 function str (val) {
-	var prevIndent, res;
+	var res;
 
 	switch (typeof val) {
 	//TODO: make this smarter. a string may be represented by an atom.
 	case 'string':
-		return '"' + val + '"';
+		return quote(val);
 	case 'number':
 		return String(val);
 
@@ -607,7 +612,6 @@ function str (val) {
 			return TK.NIL;
 		}
 
-		prevIndent = indent;
 		indent += indentChar;
 
 		if (Array.isArray(val)) {
@@ -616,7 +620,6 @@ function str (val) {
 		else {
 			res = stringObject(val);
 		}
-		indent = prevIndent;
 
 		return res;
 
@@ -655,6 +658,18 @@ function str (val) {
 			TK.SYMBOL_KEY + String(key) +
 			TK.SEPARATOR + str(obj[key]) );
 	}
+}
+
+//takes a string and dresses it up nice and tidy
+function quote(string) {
+	//check to see whether we can represent it as an atom
+	if (!sepRe.test(string)) {
+		return string;
+	}
+	return '"' +
+		string.replace(/\n/g, '\\n') +
+		string.replace(/"/g, '\\"') +
+		'"';
 }
 
 //utility method
