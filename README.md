@@ -154,5 +154,14 @@ As of the time of writing. `SEN.stringify` accepts a boolean 3rd parameter. If t
 #### TODOs ####
 * Add the replacer argument to `SEN.stringify`
 
+### Testing ###
+Uses the [mocha](https://github.com/visionmedia/mocha) test framework and the [should](https://github.com/visionmedia/should.js) assertion library. To run the tests, simply do
+
+```sh
+$ mocha
+```
+
+Of course, testing is so far nowhere near completion, but it's carving its way there.
+
 ### License ###
 WTFPL
