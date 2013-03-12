@@ -686,7 +686,7 @@ function truthMap (keys) {
 //BOO!
 
 //as specified in http://es5.github.com/#x15.12.2
-SEN.parse = function (sen, reviver) {
+SEN.decode = SEN.parse = function (sen, reviver) {
 	var unfiltered = parser.parse(sen),
 		root;
 
@@ -727,7 +727,7 @@ SEN.parse = function (sen, reviver) {
 	}
 };
 
-SEN.stringify = function (obj, replacer, spaces) {
+SEN.encode = SEN.stringify = function (obj, replacer, spaces) {
 	if (spaces) {
 		lineSep = '\n';
 		indentChar = ' ';
