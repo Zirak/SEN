@@ -1,4 +1,4 @@
-/* global SEN:true, TK:true */
+/* global SEN:true */
 /* jshint devel:true*/
 if (typeof SEN === 'undefined') {
 	SEN = {};
@@ -29,6 +29,11 @@ var TK = {
 	ZALGO      : '̳̲͎̟͚̰͈͂̾̋͌ͩ̅̎́Z̸̲͕̺̼͗̋̀́A͔̒͂ͬ̃̋ͭ͛̚L͉̹̟̙̆ͯ̓̀̅̄͗ͬ̕G͒̔ͣ̾ͮͭ̇͊͏̴͚͇̟̬̤̖̞̕ͅỎ̵̲̮͎͕͎͙̤̾̂̈́ͣ̂́!̛̺̙͎͕̹̍͛ͧ̇͋̃͑'
 };
 
+var SEPARATORS = truthMap([
+	TK.BEGIN_SEXP, TK.END_SEXP,
+	TK.SEPARATOR, TK.NEWLINE,
+	TK.COMMENT
+])
 
 //SEN.parse will be exposed at the end
 
@@ -122,6 +127,7 @@ parser.tokenize = function () {
 		return parser.tokenize();
 	}
 
+	var idx = this.idx;
 	for (var i = 0; i < this.tokens.length; value = undefined, i++) {
 		tok = this.tokens[i];
 
@@ -129,9 +135,11 @@ parser.tokenize = function () {
 			value = tok.tokenize();
 		}
 
-		if (value) {
+		if (value && value !== this.VOID) {
 			return value;
 		}
+		//roll backwards, in case there was a partial match
+		this.idx = idx;
 	}
 
 	if (!value) {
@@ -334,10 +342,17 @@ var number = {
 	tokenize : function () {
 		var ch = parser.current();
 
+		var ret;
 		if (ch === '#') {
-			return this.tokenizeBased();
+			ret = this.tokenizeBased();
 		}
-		return this.tokenizeLiteral();
+		ret = this.tokenizeLiteral();
+
+		ch = parser.current();
+		if (ch && !SEPARATORS[ch]) {
+			return parser.VOID;
+		}
+		return ret;
 	},
 
 	tokenizeLiteral : function () {
@@ -500,12 +515,6 @@ var symbol = {
 var atom = {
 	name : 'atom',
 
-	not : truthMap([
-		TK.BEGIN_SEXP, TK.END_SEXP,
-		TK.SEPARATOR, TK.NEWLINE,
-		TK.COMMENT
-	]),
-
 	special : (function () {
 		var ret = {};
 		ret[TK.NIL] = null;
@@ -530,7 +539,7 @@ var atom = {
 		var val = '',
 			ch = parser.current();
 
-		while (ch && !this.not[ch]) {
+		while (ch && !SEPARATORS[ch]) {
 			val += ch;
 			ch = parser.nextChar();
 		}
