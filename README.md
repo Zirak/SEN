@@ -1,4 +1,4 @@
-### SEN: S-Expression Notation ###
+## SEN: S-Expression Notation ##
 
 In Lisp, data is code. Coincidentally, Lisp stands for LISt-Processing, and if you've ever seen a line of lisp (usually followed by "sweet mother of jesus what are all these parentheses?"), you'll know that lists are easy to express:
 
@@ -154,3 +154,6 @@ As of the time of writing. `SEN.stringify` accepts a boolean 3rd parameter. If t
 #### TODOs ####
 * Add proper number support
 * Add the reviver argument to `SEN.parse` and `SEN.stringify`
+
+### License ###
+WTFPL
