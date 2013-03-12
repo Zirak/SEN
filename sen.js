@@ -669,7 +669,48 @@ function truthMap (keys) {
 }
 
 //BOO!
-SEN.parse = parser.parse.bind(parser);
+
+//as specified in http://es5.github.com/#x15.12.2
+SEN.parse = function (sen, reviver) {
+	var unfiltered = parser.parse(sen),
+		root;
+
+	if (reviver && reviver.call) {
+		root = { '': unfiltered };
+		return walk(root, '');
+	}
+	return unfiltered;
+
+	function walk (holder, key) {
+		var val = holder[key], item;
+
+		if (Array.isArray(val)) {
+			for (var i = 0, len = val.length; i < len; i += 1) {
+				item = walk(val, i);
+				resolve(val, i, item);
+			}
+		}
+		else if (val && typeof val === 'object') {
+			var keys = Object.keys(val);
+
+			for (var i = 0, len = keys.length; i < len; i += 1) {
+				item = walk(val, keys[i]);
+				resolve(val, keys[i], item);
+			}
+		}
+
+		return reviver.call(holder, key, val);
+	}
+
+	function resolve (holder, key, item) {
+		if (item === undefined) {
+			delete holder[key];
+		}
+		else {
+			holder[key] = item;
+		}
+	}
+};
 
 SEN.stringify = function (obj, replacer, spaces) {
 	if (spaces) {

@@ -152,8 +152,7 @@ sen_str = SEN.stringify(js_obj)
 As of the time of writing. `SEN.stringify` accepts a boolean 3rd parameter. If true, then the output string will be beautified.
 
 #### TODOs ####
-* Add proper number support
-* Add the reviver argument to `SEN.parse` and `SEN.stringify`
+* Add the replacer argument to `SEN.stringify`
 
 ### License ###
 WTFPL
