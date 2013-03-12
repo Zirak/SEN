@@ -1,7 +1,8 @@
 /* global SEN:true */
 /* jshint devel:true*/
-if (typeof SEN === 'undefined') {
-	SEN = {};
+var SEN = {};
+if (typeof exports !== 'undefined') {
+	exports.SEN = SEN;
 }
 
 (function () {
