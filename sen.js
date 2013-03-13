@@ -41,6 +41,9 @@ var SEPARATORS = truthMap([
 	TK.SEPARATOR, TK.NEWLINE,
 	TK.COMMENT
 ]);
+var RESERVED = truthMap([
+	TK.NIL, TK.TRUE
+]);
 
 //SEN.parse will be exposed at the end
 
@@ -575,101 +578,115 @@ parser.registerTokens([
 
 
 //SEN.stringify will also be exposed in the epilogue
-var lineSep = '',
-	indentChar = '',
+var encoder = {
+	//h4x needed for leniant atom detection
+	sepRe : (function () {
+		var seps = Object.keys(SEPARATORS),
+			res  = Object.keys(RESERVED),
 
-	indent = '';
+			numeric = '^[\\d#]',
+			or = '|\\';
 
-//h4x needed for atom detection
-var sepRe = new RegExp(
-	'^[\\d#]|\\' +Object.keys(SEPARATORS).join('|\\'),
-	'i');
+		return new RegExp(
+			[numeric + or + seps.join(or), res.join('|')].join('|'),
+			'i');
+	})(),
 
-//returns the SEN representation of val
-function str (val) {
-	var res;
-
-	switch (typeof val) {
-	//TODO: make this smarter. a string may be represented by an atom.
-	case 'string':
-		return quote(val);
-	case 'number':
-		return String(val);
-
-	case 'boolean':
-		if (val === true) {
-			return TK.TRUE;
-		}
-		//intentional fall-through. we want false to map to the same value as
-		// undefined/null
-
-	case 'undefined':
-	case 'null': //added in vain hope that it will work one day
-		return TK.NIL;
-
-	case 'object':
-		if (!val) {
-			return TK.NIL;
-		}
-
-		indent += indentChar;
-
-		if (Array.isArray(val)) {
-			res = stringArray(val);
+	reinit : function (beautify) {
+		if (beautify) {
+			this.lineSep = '\n';
+			this.indentChar = ' ';
 		}
 		else {
-			res = stringObject(val);
+			this.lineSep = '';
+			this.indentChar = '';
 		}
+		this.indent = '';
+	},
 
-		return res;
+	encode : function (val) {
+		var res;
 
-	default:
-		throw new SyntaxError('aint nobody got encoding fo dat');
-	}
+		switch (typeof val) {
+		case 'string':
+			return this.quote(val);
+		case 'number':
+			return String(val);
 
-	function stringArray (arr) {
+		case 'boolean':
+			if (val === true) {
+				return TK.TRUE;
+			}
+			//intentional fall-through. we want false to map to the same value
+			// as undefined/null
+
+		case 'undefined':
+		case 'null': //added in vain hope that it will work one day
+			return TK.NIL;
+
+		case 'object':
+			if (!val) {
+				return TK.NIL;
+			}
+
+			this.indent += this.indentChar;
+
+			if (Array.isArray(val)) {
+				res = this.encodeArray(val);
+			}
+			else {
+				res = this.encodeObject(val);
+			}
+
+			return res;
+
+		default:
+			throw new SyntaxError('aint nobody got encoding fo dat');
+		}
+	},
+
+	//takes a string and dresses it up nice and tidy
+	quote : function (string) {
+		//check to see whether we can represent it as an atom
+		if (!this.sepRe.test(string)) {
+			return string;
+		}
+		return '"' +
+			string.replace(/\n/g, '\\n').replace(/"/g, '\\"') +
+			'"';
+	},
+
+	encodeArray : function (arr) {
 		if (!arr.length) {
 			return TK.BEGIN_SEXP + TK.END_SEXP;
 		}
 
-		return (
-			TK.BEGIN_SEXP +
-			arr.map(str).join(TK.SEPARATOR + lineSep + indent) +
-			TK.END_SEXP );
-	}
+		var encoded =
+			arr.map(this.encode, this)
+			.join(TK.SEPARATOR + this.lineSep + this.indent);
 
-	function stringObject (obj) {
+		return TK.BEGIN_SEXP + encoded + TK.END_SEXP;
+	},
+
+	encodeObject : function (obj) {
 		var keys = Object.keys(obj);
 
 		if (!keys.length) {
 			return TK.BEGIN_SEXP + TK.END_SEXP;
 		}
 
-		return (
-			TK.BEGIN_SEXP +
-			keys
-				.map(stringPair.bind(null, obj))
-				.join(TK.SEPARATOR + lineSep + indent ) +
-			TK.END_SEXP );
-	}
+		var encoded =
+			keys.map(encodePair.bind(this, obj))
+			.join(TK.SEPARATOR + this.lineSep + this.indent);
 
-	function stringPair (obj, key) {
-		return (
-			TK.SYMBOL_KEY + String(key) +
-			TK.SEPARATOR + str(obj[key]) );
-	}
-}
+		return TK.BEGIN_SEXP + encoded + TK.END_SEXP;
 
-//takes a string and dresses it up nice and tidy
-function quote(string) {
-	//check to see whether we can represent it as an atom
-	if (!sepRe.test(string)) {
-		return string;
+		function encodePair (obj, key) {
+			return (TK.SYMBOL_KEY + String(key) +
+					TK.SEPARATOR  + this.encode(obj[key]) );
+		}
 	}
-	return '"' +
-		string.replace(/\n/g, '\\n').replace(/"/g, '\\"') +
-		'"';
-}
+};
 
 //utility method
 function literalValue () { /*jshint validthis:true*/ return this.value; }
@@ -728,20 +745,12 @@ SEN.decode = SEN.parse = function (sen, reviver) {
 };
 
 SEN.encode = SEN.stringify = function (obj, replacer, spaces) {
-	if (spaces) {
-		lineSep = '\n';
-		indentChar = ' ';
-	}
-	else {
-		lineSep = '';
-		indentChar = '';
-	}
-	indent = '';
-
-	return str(obj);
+	encoder.reinit(!!spaces);
+	return encoder.encode(obj);
 };
 
 //for debugging. TODO: remove the following
 //TODO: check TODOs
 SEN.parser = parser;
+SEN.encoder = encoder;
 })();
