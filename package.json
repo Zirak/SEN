@@ -1,0 +1,28 @@
+{
+  "name": "SEN",
+  "version": "0.0.0",
+  "description": "S-Expression Notation",
+  "main": "sen.js",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {},
+  "devDependencies": {
+	  "mocha": "~1.8.1",
+      "should": "~1.2.2"
+  },
+  "scripts": {
+    "test": "mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Zirak/SEN.git"
+  },
+  "keywords": [
+    "language",
+    "parser"
+  ],
+  "author": "Zirak",
+  "license": "WTFPL",
+  "readmeFilename": "README.md",
+}
