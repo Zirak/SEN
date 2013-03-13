@@ -582,7 +582,7 @@ var lineSep = '',
 
 //h4x needed for atom detection
 var sepRe = new RegExp(
-	'\\' +Object.keys(SEPARATORS).join('|\\') + '|\\d',
+	'^[\\d#]|\\' +Object.keys(SEPARATORS).join('|\\'),
 	'i');
 
 //returns the SEN representation of val
