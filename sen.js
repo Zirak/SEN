@@ -5,7 +5,7 @@
  */
 
 /* global SEN:true */
-/* jshint devel:true*/
+/* jshint devel:true, node:true */
 var SEN = {};
 if (typeof exports !== 'undefined') {
 	exports.SEN = SEN;
@@ -40,7 +40,7 @@ var SEPARATORS = truthMap([
 	TK.BEGIN_SEXP, TK.END_SEXP,
 	TK.SEPARATOR, TK.NEWLINE,
 	TK.COMMENT
-])
+]);
 
 //SEN.parse will be exposed at the end
 
@@ -583,7 +583,7 @@ var lineSep = '',
 //h4x needed for atom detection
 var sepRe = new RegExp(
 	'\\' +Object.keys(SEPARATORS).join('|\\') + '|\\d',
-	'gi');
+	'i');
 
 //returns the SEN representation of val
 function str (val) {
@@ -667,8 +667,7 @@ function quote(string) {
 		return string;
 	}
 	return '"' +
-		string.replace(/\n/g, '\\n') +
-		string.replace(/"/g, '\\"') +
+		string.replace(/\n/g, '\\n').replace(/"/g, '\\"') +
 		'"';
 }
 
@@ -697,10 +696,11 @@ SEN.decode = SEN.parse = function (sen, reviver) {
 	return unfiltered;
 
 	function walk (holder, key) {
-		var val = holder[key], item;
+		var val = holder[key], item,
+			i, len;
 
 		if (Array.isArray(val)) {
-			for (var i = 0, len = val.length; i < len; i += 1) {
+			for (i = 0, len = val.length; i < len; i += 1) {
 				item = walk(val, i);
 				resolve(val, i, item);
 			}
@@ -708,7 +708,7 @@ SEN.decode = SEN.parse = function (sen, reviver) {
 		else if (val && typeof val === 'object') {
 			var keys = Object.keys(val);
 
-			for (var i = 0, len = keys.length; i < len; i += 1) {
+			for (i = 0, len = keys.length; i < len; i += 1) {
 				item = walk(val, keys[i]);
 				resolve(val, keys[i], item);
 			}
