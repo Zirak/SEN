@@ -584,11 +584,10 @@ var encoder = {
 		var seps = Object.keys(SEPARATORS),
 			res  = Object.keys(RESERVED),
 
-			numeric = '^[\\d#]',
-			or = '|\\';
+			numeric = '^[\\d#]';
 
 		return new RegExp(
-			[numeric + or + seps.join(or), res.join('|')].join('|'),
+			[numeric + '|\\' + seps.join('|\\'), res.join('|')].join('|'),
 			'i');
 	})(),
 
