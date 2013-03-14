@@ -27,6 +27,7 @@ var TK = {
 
 	SEPARATOR  : ' ',
 	NEWLINE    : '\n',
+	TAB        : '	',
 
 	COMMENT    : ';',
 
@@ -38,7 +39,7 @@ var TK = {
 
 var SEPARATORS = truthMap([
 	TK.BEGIN_SEXP, TK.END_SEXP,
-	TK.SEPARATOR, TK.NEWLINE,
+	TK.SEPARATOR, TK.NEWLINE, TK.TAB,
 	TK.COMMENT
 ]);
 var RESERVED = truthMap([
@@ -124,6 +125,8 @@ var parser = {
 };
 
 parser.tokenize = function () {
+	this.skipWhitespace();
+
 	var ch = parser.current(),
 		value, tok;
 
@@ -131,7 +134,7 @@ parser.tokenize = function () {
 		return this.VOID;
 	}
 	//a comment is not defined as a value, but as an exception to regular rules.
-	//therefore, it will not be recognized unless we explicitly recognize it.
+	//therefore, it will not be recognized unless we explicitly check for it.
 	if (comment.startsWith(ch)) {
 		comment.parse();
 		return parser.tokenize();
