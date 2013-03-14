@@ -51,7 +51,9 @@ var RESERVED = truthMap([
 var parser = {
 	//the value representing the lack of a token. take attention of it when
 	// translating tokens
-	VOID : {},
+	VOID : {
+		translate : function () { return null; }
+	},
 
 	tokens : [],
 
@@ -76,7 +78,7 @@ var parser = {
 		this.src = null; //cleanup
 
 		if (this.idx < src.length) {
-			console.warn('SEN.parse: Trailing characters after last value');
+			//I should do something about it
 		}
 
 		return root;
