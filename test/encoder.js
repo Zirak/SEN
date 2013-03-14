@@ -79,6 +79,17 @@ describe('encode', function () {
 		//TODO: don't suck
 	});
 
+	describe('maps', function () {
+		it('should separate values', function () {
+			str({a : 0, b : 1}).should.equal('(:a 0 :b 1)');
+		});
+
+		it('should treat all keys as symbols', function () {
+			str({a : 0}).should.equal('(:a 0)');
+			str({'0' : 0}).should.equal('(:0 0)');
+		});
+	});
+
 	describe('specials', function () {
 		it('should properly encode true', function () {
 			str(true).should.equal('t');
@@ -102,6 +113,4 @@ describe('encode', function () {
 			str('undefined').should.equal('undefined');
 		});
 	});
-
-	//TODO: add p-lists
 });
