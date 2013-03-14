@@ -3,7 +3,7 @@ var should = require('should'),
 
 var str = SEN.stringify.bind(SEN);
 
-describe('stringify', function () {
+describe('encode', function () {
 	describe('atoms', function () {
 		it('should return the literal value', function () {
 			str('foo').should.equal('foo');

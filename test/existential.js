@@ -7,12 +7,12 @@ describe('SEN', function () {
 	});
 
 	it('should have decoding', function () {
-		SEN.should.have.property('decode');
-		SEN.should.have.property('parse');
+		SEN.should.have.property('decode').and.be.a('function');
+		SEN.should.have.property('parse').and.be.a('function');
 	});
 
 	it('should have encoding', function () {
-		SEN.should.have.property('encode');
-		SEN.should.have.property('stringify');
+		SEN.should.have.property('encode').and.be.a('function');
+		SEN.should.have.property('stringify').and.be.a('function');
 	});
 });

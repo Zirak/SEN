@@ -135,10 +135,15 @@ parser.tokenize = function () {
 	if (!ch) {
 		return this.VOID;
 	}
+
 	//a comment is not defined as a value, but as an exception to regular rules.
 	//therefore, it will not be recognized unless we explicitly check for it.
 	if (comment.startsWith(ch)) {
 		comment.parse();
+
+		if (SEPARATORS[parser.current()]) {
+			return this.VOID;
+		}
 		return parser.tokenize();
 	}
 
@@ -169,6 +174,7 @@ var comment = {
 
 	parse : function () {
 		parser.skipLine();
+		parser.skipWhitespace();
 	}
 };
 
