@@ -1,33 +1,25 @@
-<script src='sen.js'></script>
+<meta charset='utf-8' />
+<link href='foo_static/style.css' rel='stylesheet' />
 
 <form name='container'>
-	<textarea name='sen' cols=80 rows=10>sen</textarea>
-
-	<br/>
-	<input type='button' name='tojs' value='Sen to JS' />
+	<input type='button' name='tojs'  value='Sen to JS' />
 	<input type='button' name='tosen' value='JSON to Sen' />
-	<br/>
 
-	<textarea name='js' cols=80 rows=10>js</textarea>
+	<br />
+
+	<section>
+		<h4>SEN</h4>
+		<textarea name='sen'>sen</textarea>
+	</section>
+	<section>
+		<h4>JSON</h4>
+		<textarea name='js'>js</textarea>
+	</section>
 </form>
+
+<script src='sen.js'></script>
+<script src='foo_static/editor.js'></script>
 <script>
-	var cont = document.container,
-		sen = cont.sen,
-		js = cont.js;
-
-	cont.tojs.onclick = function () {
-		try {
-			js.value = JSON.stringify(SEN.parse(sen.value), null, 4);
-		}
-		catch (e) {
-			js.value = e.toString();
-			throw e;
-		}
-	};
-	cont.tosen.onclick = function () {
-		sen.value = SEN.stringify(JSON.parse(js.value), null, true);
-	};
-
 	//small sanity checks, to see if I introduced any obvious errors
 	SEN.parse('a');
 	SEN.parse('(a)');
